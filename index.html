@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpineAI - Spinal Cord Damage Detection</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="styles.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { 500: '#14b8a6', 600: '#0d9488' },
+                        secondary: { 500: '#06b6d4', 600: '#0891b2' }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-50 via-white to-cyan-50/30 transition-colors duration-300">
+    
+    <!-- Navigation -->
+    <nav id="navbar" class="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-white/80 border-b border-gray-100 transition-colors duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <a href="#" onclick="showPage('home')" class="flex items-center gap-2">
+                    <div class="p-2 rounded-xl bg-gradient-to-br from-teal-500 to-cyan-500">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                    </div>
+                    <span class="font-bold text-lg text-slate-800 hidden sm:block">SpineAI</span>
+                </a>
+                
+                <div class="hidden md:flex items-center gap-1" id="nav-links">
+                    <a href="#" onclick="showPage('home')" class="nav-link active" data-page="home">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                        Home
+                    </a>
+                    <a href="#" onclick="showPage('upload')" class="nav-link" data-page="upload">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                        Upload
+                    </a>
+                    <a href="#" onclick="showPage('results')" class="nav-link" data-page="results">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                        Results
+                    </a>
+                    <a href="#" onclick="showPage('about')" class="nav-link" data-page="about">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        About
+                    </a>
+                </div>
+                
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleDarkMode()" id="theme-toggle" class="p-2 rounded-lg bg-gray-100 text-slate-600 hover:bg-gray-200 transition-colors">
+                        <svg id="sun-icon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                        <svg id="moon-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+                    </button>
+                    <button onclick="toggleMobileMenu()" class="md:hidden p-2 rounded-lg hover:bg-gray-100">
+                        <svg id="menu-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                        <svg id="close-icon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Mobile Menu -->
+    <div id="mobile-menu" class="fixed inset-y-0 right-0 z-40 w-72 bg-white shadow-2xl transform translate-x-full transition-transform duration-300 md:hidden">
+        <div class="pt-20 px-4">
+            <a href="#" onclick="showPage('home'); toggleMobileMenu();" class="mobile-nav-link" data-page="home">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                Home
+            </a>
+            <a href="#" onclick="showPage('upload'); toggleMobileMenu();" class="mobile-nav-link" data-page="upload">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                Upload
+            </a>
+            <a href="#" onclick="showPage('results'); toggleMobileMenu();" class="mobile-nav-link" data-page="results">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                Results
+            </a>
+            <a href="#" onclick="showPage('about'); toggleMobileMenu();" class="mobile-nav-link" data-page="about">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                About
+            </a>
+        </div>
+    </div>
+    <div id="mobile-overlay" class="fixed inset-0 z-30 bg-black/50 hidden md:hidden" onclick="toggleMobileMenu()"></div>
+
+    <!-- Main Content -->
+    <main class="pt-16">
+        <!-- Home Page -->
+        <section id="page-home" class="page active">
+            <!-- Hero -->
+            <div class="relative overflow-hidden">
+                <div class="absolute -top-40 -right-40 w-96 h-96 rounded-full blur-3xl opacity-30 bg-teal-300"></div>
+                <div class="absolute top-60 -left-40 w-80 h-80 rounded-full blur-3xl opacity-20 bg-cyan-300"></div>
+                
+                <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-32">
+                    <div class="grid lg:grid-cols-2 gap-12 items-center">
+                        <div class="animate-fadeIn">
+                            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-50 text-teal-600 mb-6">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                <span class="text-sm font-medium">Medical AI System</span>
+                            </div>
+                            <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-6 text-slate-900">
+                                Enhanced Spinal Cord
+                                <span class="block bg-gradient-to-r from-teal-500 to-cyan-500 bg-clip-text text-transparent">Damage Detection</span>
+                            </h1>
+                            <p class="text-lg sm:text-xl mb-8 max-w-xl text-slate-600">
+                                This system detects spinal cord abnormalities like Normal, Bulging Disc, and Herniation using YOLO v8 with state-of-the-art accuracy.
+                            </p>
+                            <div class="flex flex-col sm:flex-row gap-4">
+                                <button onclick="showPage('upload')" class="btn-primary">
+                                    Get Started
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                                </button>
+                                <button onclick="showPage('about')" class="btn-secondary">Learn More</button>
+                            </div>
+                            <div class="flex items-center gap-6 mt-10">
+                                <div class="flex items-center gap-2"><svg class="w-4 h-4 text-teal-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg><span class="text-sm text-slate-600">HIPAA Compliant</span></div>
+                                <div class="flex items-center gap-2"><svg class="w-4 h-4 text-teal-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg><span class="text-sm text-slate-600">FDA Guidelines</span></div>
+                            </div>
+                        </div>
+                        <div class="relative animate-fadeIn animation-delay-200">
+                            <div class="relative rounded-3xl overflow-hidden bg-white shadow-2xl">
+                                <img src="https://images.unsplash.com/photo-1559757175-5700dde675bc?w=800&q=80" alt="Spine MRI" class="w-full h-80 sm:h-96 object-cover">
+                                <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                                <div class="absolute bottom-4 left-4 right-4 p-4 rounded-xl backdrop-blur-xl bg-white/90">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-3">
+                                            <div class="p-2 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500">
+                                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                                            </div>
+                                            <div>
+                                                <p class="font-semibold text-slate-800">AI Analysis Ready</p>
+                                                <p class="text-sm text-slate-500">Upload your MRI scan</p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                                            <span class="text-emerald-500 text-sm font-medium">Online</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Stats -->
+            <div class="py-16 bg-white">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-8">
+                        <div class="text-center animate-fadeIn"><div class="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-teal-500 to-cyan-500 bg-clip-text text-transparent">95%+</div><div class="mt-2 text-slate-600">Accuracy Rate</div></div>
+                        <div class="text-center animate-fadeIn animation-delay-100"><div class="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-teal-500 to-cyan-500 bg-clip-text text-transparent">0.5s</div><div class="mt-2 text-slate-600">Detection Speed</div></div>
+                        <div class="text-center animate-fadeIn animation-delay-200"><div class="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-teal-500 to-cyan-500 bg-clip-text text-transparent">10K+</div><div class="mt-2 text-slate-600">Images Trained</div></div>
+                        <div class="text-center animate-fadeIn animation-delay-300"><div class="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-teal-500 to-cyan-500 bg-clip-text text-transparent">3</div><div class="mt-2 text-slate-600">Classifications</div></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Features -->
+            <div class="py-24">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="text-center mb-16">
+                        <h2 class="text-3xl sm:text-4xl font-bold mb-4 text-slate-900">Why Choose SpineAI?</h2>
+                        <p class="text-lg max-w-2xl mx-auto text-slate-600">Advanced deep learning technology designed to assist healthcare professionals.</p>
+                    </div>
+                    <div class="grid md:grid-cols-3 gap-8">
+                        <div class="card animate-fadeIn">
+                            <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center mb-6 shadow-lg">
+                                <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+                            </div>
+                            <h3 class="text-xl font-semibold mb-3 text-slate-800">AI-Powered Analysis</h3>
+                            <p class="text-slate-600">YOLO v8 deep learning model trained on thousands of spinal images for accurate detection.</p>
+                        </div>
+                        <div class="card animate-fadeIn animation-delay-100">
+                            <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center mb-6 shadow-lg">
+                                <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                            </div>
+                            <h3 class="text-xl font-semibold mb-3 text-slate-800">Real-Time Results</h3>
+                            <p class="text-slate-600">Get instant analysis results with detailed confidence scores and visualizations.</p>
+                        </div>
+                        <div class="card animate-fadeIn animation-delay-200">
+                            <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center mb-6 shadow-lg">
+                                <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                            </div>
+                            <h3 class="text-xl font-semibold mb-3 text-slate-800">Clinical Accuracy</h3>
+                            <p class="text-slate-600">High precision detection with mAP scores validated against expert annotations.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- CTA -->
+            <div class="py-24 bg-gradient-to-br from-teal-500 to-cyan-600">
+                <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                    <svg class="w-12 h-12 mx-auto mb-6 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                    <h2 class="text-3xl sm:text-4xl font-bold text-white mb-4">Ready to Analyze Your First Scan?</h2>
+                    <p class="text-lg mb-8 text-white/80">Upload your MRI or X-ray image and get instant AI-powered analysis.</p>
+                    <button onclick="showPage('upload')" class="px-8 py-4 text-lg rounded-xl bg-white text-teal-600 hover:bg-gray-50 shadow-lg font-medium inline-flex items-center gap-2 transition-all hover:scale-105">
+                        Start Analysis Now
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Upload Page -->
+        <section id="page-upload" class="page">
+            <div class="min-h-screen py-12 sm:py-20">
+                <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="text-center mb-12 animate-fadeIn">
+                        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-50 text-teal-600 mb-6">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                            <span class="text-sm font-medium">Image Analysis</span>
+                        </div>
+                        <h1 class="text-3xl sm:text-4xl font-bold mb-4 text-slate-900">Upload Your Scan</h1>
+                        <p class="text-lg max-w-xl mx-auto text-slate-600">Upload an MRI or X-ray image of the spine for AI-powered analysis.</p>
+                    </div>
+                    
+                    <div class="card animate-fadeIn animation-delay-100">
+                        <!-- Dropzone -->
+                        <div id="dropzone" class="border-2 border-dashed border-gray-200 rounded-2xl p-12 text-center cursor-pointer transition-all duration-300 hover:border-gray-300 hover:bg-gray-50">
+                            <input type="file" id="file-input" accept="image/*" class="hidden">
+                            <div class="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-teal-50 to-cyan-50 flex items-center justify-center mb-6">
+                                <svg class="w-10 h-10 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                            </div>
+                            <h3 class="text-xl font-semibold mb-2 text-slate-800">Drag and drop your image</h3>
+                            <p class="text-slate-500">or <span class="text-teal-500 font-medium">browse files</span></p>
+                        </div>
+                        
+                        <!-- Preview -->
+                        <div id="preview-section" class="hidden">
+                            <div class="relative rounded-2xl overflow-hidden bg-gray-100">
+                                <img id="preview-image" src="" alt="Preview" class="w-full h-80 object-contain">
+                                <button onclick="removeFile()" class="absolute top-4 right-4 p-2 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                </button>
+                            </div>
+                            <div class="mt-6 p-4 rounded-xl bg-gray-50 flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="p-2 rounded-lg bg-white shadow-sm">
+                                        <svg class="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-slate-800" id="file-name">image.jpg</p>
+                                        <p class="text-sm text-slate-500" id="file-size">0 MB</p>
+                                    </div>
+                                </div>
+                                <svg class="w-6 h-6 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                            </div>
+                            
+                            <!-- Progress -->
+                            <div id="progress-section" class="hidden mt-6">
+                                <div class="flex justify-between mb-2">
+                                    <span class="text-slate-700">Analyzing image...</span>
+                                    <span class="text-teal-500 font-medium" id="progress-text">0%</span>
+                                </div>
+                                <div class="h-2 rounded-full bg-gray-200 overflow-hidden">
+                                    <div id="progress-bar" class="h-full bg-gradient-to-r from-teal-500 to-cyan-500 rounded-full transition-all duration-300" style="width: 0%"></div>
+                                </div>
+                                <div class="mt-4 flex items-center gap-2 text-slate-500">
+                                    <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                    <span class="text-sm">Running YOLO v8 detection model...</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Buttons -->
+                            <div id="action-buttons" class="mt-6 flex flex-col sm:flex-row gap-4">
+                                <button onclick="removeFile()" class="btn-secondary flex-1">Choose Different Image</button>
+                                <button onclick="analyzeImage()" class="btn-primary flex-1">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                                    Analyze Image
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Formats -->
+                        <div id="formats" class="mt-6 flex flex-wrap justify-center gap-2">
+                            <span class="px-3 py-1 rounded-lg text-xs font-medium bg-gray-100 text-slate-600">DICOM</span>
+                            <span class="px-3 py-1 rounded-lg text-xs font-medium bg-gray-100 text-slate-600">JPEG</span>
+                            <span class="px-3 py-1 rounded-lg text-xs font-medium bg-gray-100 text-slate-600">PNG</span>
+                            <span class="px-3 py-1 rounded-lg text-xs font-medium bg-gray-100 text-slate-600">TIFF</span>
+                            <span class="px-3 py-1 rounded-lg text-xs font-medium bg-gray-100 text-slate-600">NIfTI</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Info Cards -->
+                    <div class="grid sm:grid-cols-2 gap-6 mt-8">
+                        <div class="card animate-fadeIn animation-delay-200">
+                            <div class="flex items-start gap-4">
+                                <div class="p-3 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500">
+                                    <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                                </div>
+                                <div>
+                                    <h3 class="font-semibold mb-1 text-slate-800">Best Practices</h3>
+                                    <p class="text-sm text-slate-600">Use high-resolution MRI or CT scans. Sagittal or axial views work best.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card animate-fadeIn animation-delay-300">
+                            <div class="flex items-start gap-4">
+                                <div class="p-3 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                                </div>
+                                <div>
+                                    <h3 class="font-semibold mb-1 text-slate-800">Medical Disclaimer</h3>
+                                    <p class="text-sm text-slate-600">This tool assists diagnosis but doesn't replace professional evaluation.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Results Page -->
+        <section id="page-results" class="page">
+            <div class="min-h-screen py-12 sm:py-20">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <!-- Header -->
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 animate-fadeIn">
+                        <div>
+                            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 text-emerald-600 mb-4">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                                <span class="text-sm font-medium">Analysis Complete</span>
+                            </div>
+                            <h1 class="text-3xl sm:text-4xl font-bold text-slate-900">Detection Results</h1>
+                        </div>
+                        <div class="flex gap-3">
+                            <button class="btn-secondary text-sm">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+                                Share
+                            </button>
+                            <button class="btn-secondary text-sm">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                Export
+                            </button>
+                            <button onclick="showPage('upload')" class="btn-primary text-sm">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                New Scan
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Results Grid -->
+                    <div class="grid lg:grid-cols-3 gap-6 mb-8">
+                        <!-- Detection Image -->
+                        <div class="lg:col-span-2 card animate-fadeIn animation-delay-100">
+                            <h3 class="font-semibold mb-4 flex items-center gap-2 text-slate-800">
+                                <svg class="w-5 h-5 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                                Detection Output
+                            </h3>
+                            <div class="relative rounded-xl overflow-hidden bg-gray-100">
+                                <img src="https://images.unsplash.com/photo-1559757175-5700dde675bc?w=800&q=80" alt="Detection Result" class="w-full h-80 object-cover">
+                                <div class="absolute border-2 border-red-500 rounded" style="left: 30%; top: 35%; width: 25%; height: 30%; box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);">
+                                    <div class="absolute -top-7 left-0 bg-red-500 text-white text-xs px-2 py-1 rounded">Herniation (94.7%)</div>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center mt-4">
+                                <span class="text-sm text-slate-500">Processed with YOLO v8</span>
+                                <span class="px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">High Risk</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Prediction Details -->
+                        <div class="card animate-fadeIn animation-delay-200">
+                            <h3 class="font-semibold mb-4 flex items-center gap-2 text-slate-800">
+                                <svg class="w-5 h-5 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                                Prediction Details
+                            </h3>
+                            
+                            <div class="p-4 rounded-xl bg-gray-50 mb-6">
+                                <p class="text-sm mb-2 text-slate-500">Detected Condition</p>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-4 h-4 rounded-full bg-red-500"></div>
+                                    <span class="text-2xl font-bold text-slate-800">Herniation</span>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-6">
+                                <div class="flex justify-between mb-2">
+                                    <span class="text-sm text-slate-500">Confidence Score</span>
+                                    <span class="text-teal-500 font-bold">94.7%</span>
+                                </div>
+                                <div class="h-3 rounded-full bg-gray-200 overflow-hidden">
+                                    <div class="h-full bg-gradient-to-r from-teal-500 to-cyan-500 rounded-full animate-progress" style="width: 94.7%"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-6">
+                                <div class="flex justify-between mb-2">
+                                    <span class="text-sm text-slate-500">IoU Score</span>
+                                    <span class="text-cyan-500 font-bold">87.0%</span>
+                                </div>
+                                <div class="h-3 rounded-full bg-gray-200 overflow-hidden">
+                                    <div class="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full animate-progress" style="width: 87%"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="p-4 rounded-xl bg-amber-50 border border-amber-100">
+                                <div class="flex items-start gap-3">
+                                    <svg class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                                    <p class="text-sm text-amber-700">This detection indicates a potential herniation condition. Please consult a medical professional.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Metrics Cards -->
+                    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                        <div class="card animate-fadeIn animation-delay-100">
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="text-sm font-medium text-slate-500">mAP</span>
+                                <svg class="w-4 h-4 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                            </div>
+                            <div class="text-3xl font-bold text-slate-800">92%</div>
+                            <div class="h-2 rounded-full mt-4 bg-gray-200 overflow-hidden"><div class="h-full bg-gradient-to-r from-teal-500 to-cyan-500 animate-progress" style="width: 92%"></div></div>
+                        </div>
+                        <div class="card animate-fadeIn animation-delay-200">
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="text-sm font-medium text-slate-500">Precision</span>
+                                <svg class="w-4 h-4 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                            </div>
+                            <div class="text-3xl font-bold text-slate-800">95%</div>
+                            <div class="h-2 rounded-full mt-4 bg-gray-200 overflow-hidden"><div class="h-full bg-gradient-to-r from-teal-500 to-cyan-500 animate-progress" style="width: 95%"></div></div>
+                        </div>
+                        <div class="card animate-fadeIn animation-delay-300">
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="text-sm font-medium text-slate-500">Recall</span>
+                                <svg class="w-4 h-4 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                            </div>
+                            <div class="text-3xl font-bold text-slate-800">89%</div>
+                            <div class="h-2 rounded-full mt-4 bg-gray-200 overflow-hidden"><div class="h-full bg-gradient-to-r from-teal-500 to-cyan-500 animate-progress" style="width: 89%"></div></div>
+                        </div>
+                        <div class="card animate-fadeIn animation-delay-400">
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="text-sm font-medium text-slate-500">F1 Score</span>
+                                <svg class="w-4 h-4 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                            </div>
+                            <div class="text-3xl font-bold text-slate-800">92%</div>
+                            <div class="h-2 rounded-full mt-4 bg-gray-200 overflow-hidden"><div class="h-full bg-gradient-to-r from-teal-500 to-cyan-500 animate-progress" style="width: 92%"></div></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Charts -->
+                    <div class="grid lg:grid-cols-2 gap-6">
+                        <div class="card animate-fadeIn animation-delay-200">
+                            <h3 class="font-semibold mb-4 text-slate-800">Class Distribution</h3>
+                            <div class="flex items-center justify-center">
+                                <div class="relative w-48 h-48">
+                                    <svg viewBox="0 0 36 36" class="w-full h-full">
+                                        <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#10B981" stroke-width="3" stroke-dasharray="45 55" stroke-dashoffset="25"></circle>
+                                        <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#F59E0B" stroke-width="3" stroke-dasharray="35 65" stroke-dashoffset="-20"></circle>
+                                        <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#EF4444" stroke-width="3" stroke-dasharray="20 80" stroke-dashoffset="-55"></circle>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="flex justify-center gap-6 mt-4">
+                                <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-emerald-500"></div><span class="text-sm text-slate-600">Normal (45%)</span></div>
+                                <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-amber-500"></div><span class="text-sm text-slate-600">Bulging (35%)</span></div>
+                                <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-red-500"></div><span class="text-sm text-slate-600">Herniation (20%)</span></div>
+                            </div>
+                        </div>
+                        
+                        <div class="card animate-fadeIn animation-delay-300">
+                            <h3 class="font-semibold mb-4 text-slate-800">Metrics Comparison</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <div class="flex justify-between mb-1"><span class="text-sm text-slate-600">mAP</span><span class="text-sm font-semibold text-slate-800">92%</span></div>
+                                    <div class="h-6 bg-gray-200 rounded-lg overflow-hidden"><div class="h-full bg-gradient-to-r from-teal-500 to-cyan-500 rounded-lg flex items-center justify-end pr-2 animate-progress" style="width: 92%"><span class="text-xs text-white font-medium">92%</span></div></div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between mb-1"><span class="text-sm text-slate-600">Precision</span><span class="text-sm font-semibold text-slate-800">95%</span></div>
+                                    <div class="h-6 bg-gray-200 rounded-lg overflow-hidden"><div class="h-full bg-gradient-to-r from-violet-500 to-purple-500 rounded-lg flex items-center justify-end pr-2 animate-progress" style="width: 95%"><span class="text-xs text-white font-medium">95%</span></div></div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between mb-1"><span class="text-sm text-slate-600">Recall</span><span class="text-sm font-semibold text-slate-800">89%</span></div>
+                                    <div class="h-6 bg-gray-200 rounded-lg overflow-hidden"><div class="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg flex items-center justify-end pr-2 animate-progress" style="width: 89%"><span class="text-xs text-white font-medium">89%</span></div></div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between mb-1"><span class="text-sm text-slate-600">F1 Score</span><span class="text-sm font-semibold text-slate-800">92%</span></div>
+                                    <div class="h-6 bg-gray-200 rounded-lg overflow-hidden"><div class="h-full bg-gradient-to-r from-pink-500 to-rose-500 rounded-lg flex items-center justify-end pr-2 animate-progress" style="width: 92%"><span class="text-xs text-white font-medium">92%</span></div></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- About Page -->
+        <section id="page-about" class="page">
+            <div class="min-h-screen py-12 sm:py-20">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <!-- Header -->
+                    <div class="text-center mb-16 animate-fadeIn">
+                        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-50 text-teal-600 mb-6">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 14l9-5-9-5-9 5 9 5z"/><path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/></svg>
+                            <span class="text-sm font-medium">Research Project</span>
+                        </div>
+                        <h1 class="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6 text-slate-900">About SpineAI</h1>
+                        <p class="text-lg max-w-3xl mx-auto text-slate-600">A cutting-edge research project combining deep learning and medical imaging to revolutionize spinal cord damage detection.</p>
+                    </div>
+                    
+                    <!-- Workflow -->
+                    <div class="mb-20">
+                        <div class="text-center mb-12">
+                            <h2 class="text-2xl sm:text-3xl font-bold mb-4 text-slate-900">Project Workflow</h2>
+                            <p class="max-w-2xl mx-auto text-slate-600">Our systematic approach ensures reliable and reproducible results</p>
+                        </div>
+                        
+                        <div class="grid sm:grid-cols-2 lg:grid-cols-5 gap-6">
+                            <div class="card text-center animate-fadeIn relative">
+                                <div class="absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold bg-teal-100 text-teal-600">1</div>
+                                <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center mb-4 shadow-lg">
+                                    <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/></svg>
+                                </div>
+                                <h3 class="font-semibold mb-2 text-slate-800">Data Collection</h3>
+                                <p class="text-sm text-slate-600">Curated dataset of spinal MRI scans</p>
+                            </div>
+                            <div class="card text-center animate-fadeIn animation-delay-100 relative">
+                                <div class="absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold bg-teal-100 text-teal-600">2</div>
+                                <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center mb-4 shadow-lg">
+                                    <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+                                </div>
+                                <h3 class="font-semibold mb-2 text-slate-800">Preprocessing</h3>
+                                <p class="text-sm text-slate-600">Image normalization & noise reduction</p>
+                            </div>
+                            <div class="card text-center animate-fadeIn animation-delay-200 relative">
+                                <div class="absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold bg-teal-100 text-teal-600">3</div>
+                                <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center mb-4 shadow-lg">
+                                    <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                                </div>
+                                <h3 class="font-semibold mb-2 text-slate-800">Augmentation</h3>
+                                <p class="text-sm text-slate-600">Rotations, flips & brightness changes</p>
+                            </div>
+                            <div class="card text-center animate-fadeIn animation-delay-300 relative">
+                                <div class="absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold bg-teal-100 text-teal-600">4</div>
+                                <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center mb-4 shadow-lg">
+                                    <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>
+                                </div>
+                                <h3 class="font-semibold mb-2 text-slate-800">YOLO v8 Training</h3>
+                                <p class="text-sm text-slate-600">Transfer learning & fine-tuning</p>
+                            </div>
+                            <div class="card text-center animate-fadeIn animation-delay-400 relative">
+                                <div class="absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold bg-teal-100 text-teal-600">5</div>
+                                <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center mb-4 shadow-lg">
+                                    <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                                </div>
+                                <h3 class="font-semibold mb-2 text-slate-800">Evaluation</h3>
+                                <p class="text-sm text-slate-600">mAP, Precision & Recall metrics</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Team -->
+                    <div>
+                        <div class="text-center mb-12">
+                            <h2 class="text-2xl sm:text-3xl font-bold mb-4 text-slate-900">Our Team</h2>
+                            <p class="max-w-2xl mx-auto text-slate-600">Interdisciplinary experts in medicine, AI, and software engineering</p>
+                        </div>
+                        
+                        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <div class="card text-center animate-fadeIn">
+                                <img src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=200&q=80" alt="Dr. Sarah Chen" class="w-24 h-24 mx-auto rounded-full object-cover mb-4 ring-4 ring-offset-4 ring-teal-500/20">
+                                <h3 class="font-semibold mb-1 text-slate-800">Dr. Sarah Chen</h3>
+                                <p class="text-teal-500 text-sm font-medium mb-2">Lead Researcher</p>
+                                <p class="text-sm text-slate-500">Medical Imaging AI</p>
+                            </div>
+                            <div class="card text-center animate-fadeIn animation-delay-100">
+                                <img src="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=200&q=80" alt="Prof. James Wilson" class="w-24 h-24 mx-auto rounded-full object-cover mb-4 ring-4 ring-offset-4 ring-teal-500/20">
+                                <h3 class="font-semibold mb-1 text-slate-800">Prof. James Wilson</h3>
+                                <p class="text-teal-500 text-sm font-medium mb-2">Neuroradiology Advisor</p>
+                                <p class="text-sm text-slate-500">Spinal Diagnostics</p>
+                            </div>
+                            <div class="card text-center animate-fadeIn animation-delay-200">
+                                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80" alt="Alex Rodriguez" class="w-24 h-24 mx-auto rounded-full object-cover mb-4 ring-4 ring-offset-4 ring-teal-500/20">
+                                <h3 class="font-semibold mb-1 text-slate-800">Alex Rodriguez</h3>
+                                <p class="text-teal-500 text-sm font-medium mb-2">ML Engineer</p>
+                                <p class="text-sm text-slate-500">Computer Vision</p>
+                            </div>
+                            <div class="card text-center animate-fadeIn animation-delay-300">
+                                <img src="https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=200&q=80" alt="Dr. Emily Park" class="w-24 h-24 mx-auto rounded-full object-cover mb-4 ring-4 ring-offset-4 ring-teal-500/20">
+                                <h3 class="font-semibold mb-1 text-slate-800">Dr. Emily Park</h3>
+                                <p class="text-teal-500 text-sm font-medium mb-2">Clinical Validation</p>
+                                <p class="text-sm text-slate-500">Orthopedic Surgery</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gradient-to-br from-slate-50 to-gray-100 border-t border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div class="md:col-span-2">
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="p-2 rounded-xl bg-gradient-to-br from-teal-500 to-cyan-500">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                        </div>
+                        <span class="font-bold text-xl text-slate-800">SpineAI</span>
+                    </div>
+                    <p class="text-slate-600 max-w-md">Advanced AI-powered spinal cord damage detection using YOLO v8. Helping healthcare professionals make faster, more accurate diagnoses.</p>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4 text-slate-800">Quick Links</h4>
+                    <ul class="space-y-2 text-slate-600">
+                        <li><a href="#" class="hover:text-teal-500 transition-colors">Documentation</a></li>
+                        <li><a href="#" class="hover:text-teal-500 transition-colors">API Reference</a></li>
+                        <li><a href="#" class="hover:text-teal-500 transition-colors">Research Paper</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4 text-slate-800">Connect</h4>
+                    <div class="flex gap-3">
+                        <a href="#" class="p-2 rounded-lg bg-white text-slate-600 hover:text-teal-500 hover:bg-gray-50 shadow-sm transition-colors">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                        </a>
+                        <a href="#" class="p-2 rounded-lg bg-white text-slate-600 hover:text-teal-500 hover:bg-gray-50 shadow-sm transition-colors">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+                        </a>
+                        <a href="#" class="p-2 rounded-lg bg-white text-slate-600 hover:text-teal-500 hover:bg-gray-50 shadow-sm transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-12 pt-8 border-t border-gray-200">
+                <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+                    <p class="text-sm text-slate-500">© 2024 SpineAI. All rights reserved.</p>
+                    <p class="text-sm text-slate-500 flex items-center gap-1">Made with <svg class="w-4 h-4 text-red-500 fill-red-500" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"/></svg> for better healthcare</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
