@@ -32,7 +32,6 @@ app.mount("/results", StaticFiles(directory="results"), name="results")
 async def detect_image(file: UploadFile = File(...)):
 
     filename = str(uuid.uuid4()) + file.filename
-
     upload_path = os.path.join(UPLOAD_FOLDER, filename)
 
     with open(upload_path, "wb") as buffer:
@@ -40,14 +39,44 @@ async def detect_image(file: UploadFile = File(...)):
 
     results = model(upload_path)
 
-    result_image = results[0].plot()
+    result = results[0]
 
+    # Save result image
+    result_image = result.plot()
     result_filename = "result_" + filename
-
     result_path = os.path.join(RESULT_FOLDER, result_filename)
-
     cv2.imwrite(result_path, result_image)
 
+    # ------------------------
+    # Extract detection data
+    # ------------------------
+
+    class_names = model.names
+
+    counts = {
+        "Normal": 0,
+        "Bulging": 0,
+        "Herniation": 0
+    }
+
+    confidences = []
+
+    for box in result.boxes:
+
+        class_id = int(box.cls[0])
+        confidence = float(box.conf[0])
+
+        class_name = class_names[class_id]
+
+        if class_name in counts:
+            counts[class_name] += 1
+
+        confidences.append(confidence)
+
+    avg_confidence = round(sum(confidences)/len(confidences), 3) if confidences else 0
+
     return {
-        "result_image_url": f"http://127.0.0.1:8000/results/{result_filename}"
+        "result_image_url": f"http://127.0.0.1:8000/results/{result_filename}",
+        "counts": counts,
+        "confidence": avg_confidence
     }
