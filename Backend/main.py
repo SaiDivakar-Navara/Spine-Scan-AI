@@ -1,82 +1,116 @@
-from fastapi import FastAPI, File, UploadFile
-from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
-import shutil
 import os
 import uuid
-from ultralytics import YOLO
-import cv2
+import shutil
+from pathlib import Path
+from collections import defaultdict
 
-app = FastAPI()
+import cv2
+import numpy as np
+from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
+from ultralytics import YOLO
+
+# ── Directories ──────────────────────────────────────────────────────────────
+UPLOAD_DIR = Path("uploads")
+OUTPUT_DIR = Path("outputs")
+UPLOAD_DIR.mkdir(exist_ok=True)
+OUTPUT_DIR.mkdir(exist_ok=True)
+
+# ── Load model once at startup ────────────────────────────────────────────────
+model = YOLO("best.pt")
+
+# ── App ───────────────────────────────────────────────────────────────────────
+app = FastAPI(title="MRI Analysis API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # allow all origins (for development)
-    allow_credentials=True,
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# folders
-UPLOAD_FOLDER = "uploads"
-RESULT_FOLDER = "results"
+# Serve output images as static files at /outputs/<filename>
+app.mount("/outputs", StaticFiles(directory=OUTPUT_DIR), name="outputs")
 
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(RESULT_FOLDER, exist_ok=True)
 
-model = YOLO("best.pt")
+# ── Risk logic ────────────────────────────────────────────────────────────────
+def determine_risk(class_counts: dict) -> str:
+    if class_counts.get("Herniation", 0) > 0:
+        return "High Risk"
+    elif class_counts.get("Bulging", 0) > 0:
+        return "Low Risk"
+    return "Normal"
 
-app.mount("/results", StaticFiles(directory="results"), name="results")
 
-@app.post("/detect")
-async def detect_image(file: UploadFile = File(...)):
+# ── Endpoint ──────────────────────────────────────────────────────────────────
+@app.post("/analyze-mri")
+async def analyze_mri(file: UploadFile = File(...)):
+    # Validate file type
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Uploaded file must be an image.")
 
-    filename = str(uuid.uuid4()) + file.filename
-    upload_path = os.path.join(UPLOAD_FOLDER, filename)
+    # Save uploaded image
+    ext = Path(file.filename).suffix or ".jpg"
+    unique_id = uuid.uuid4().hex
+    input_path = UPLOAD_DIR / f"{unique_id}{ext}"
+    with input_path.open("wb") as f:
+        shutil.copyfileobj(file.file, f)
 
-    with open(upload_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    # Run YOLO inference
+    results = model(str(input_path))
+    result = results[0]  # single image
 
-    results = model(upload_path)
+    # Generate annotated image with bounding boxes
+    annotated_bgr = result.plot()  # returns BGR numpy array
+    output_filename = f"{unique_id}_output.jpg"
+    output_path = OUTPUT_DIR / output_filename
+    cv2.imwrite(str(output_path), annotated_bgr)
 
-    result = results[0]
-
-    # Save result image
-    result_image = result.plot()
-    result_filename = "result_" + filename
-    result_path = os.path.join(RESULT_FOLDER, result_filename)
-    cv2.imwrite(result_path, result_image)
-
-    # ------------------------
-    # Extract detection data
-    # ------------------------
-
-    class_names = model.names
-
-    counts = {
-        "Normal": 0,
-        "Bulging": 0,
-        "Herniation": 0
-    }
-
+    # Extract detections
+    detections = []
+    class_counts = defaultdict(int)
     confidences = []
 
-    for box in result.boxes:
+    if result.boxes is not None:
+        for box in result.boxes:
+            cls_id = int(box.cls.item())
+            cls_name = model.names[cls_id]
+            conf = round(float(box.conf.item()), 4)
+            xyxy = box.xyxy[0].tolist()
 
-        class_id = int(box.cls[0])
-        confidence = float(box.conf[0])
+            detections.append({
+                "class": cls_name,
+                "confidence": conf,
+                "bbox": {
+                    "x1": round(xyxy[0], 2),
+                    "y1": round(xyxy[1], 2),
+                    "x2": round(xyxy[2], 2),
+                    "y2": round(xyxy[3], 2),
+                },
+            })
+            class_counts[cls_name] += 1
+            confidences.append(conf)
 
-        class_name = class_names[class_id]
-
-        if class_name in counts:
-            counts[class_name] += 1
-
-        confidences.append(confidence)
-
-    avg_confidence = round(sum(confidences)/len(confidences), 3) if confidences else 0
+    overall_confidence = round(sum(confidences) / len(confidences), 4) if confidences else 0.0
+    risk_level = determine_risk(class_counts)
 
     return {
-        "result_image_url": f"http://127.0.0.1:8000/results/{result_filename}",
-        "counts": counts,
-        "confidence": avg_confidence
+        "output_image_url": f"/outputs/{output_filename}",
+        "class_counts": dict(class_counts),
+        "detections": detections,
+        "overall_confidence": overall_confidence,
+        "risk_level": risk_level,
     }
+
+
+# ── Health check ──────────────────────────────────────────────────────────────
+@app.get("/")
+def root():
+    return {"status": "MRI Analysis API is running"}
+
+
+# ── Entry point ───────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
