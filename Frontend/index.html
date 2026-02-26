@@ -778,7 +778,89 @@
         </div>
     </footer>
 
-    
+    <div id="report-modal-overlay" onclick="handleReportOverlayClick(event)">
+            <div id="report-modal-box">
+                <!-- Header -->
+                <div class="rmodal-header">
+                    <h2>Patient Details</h2>
+                    <button class="rmodal-close" onclick="closeReportModal()">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Form Body -->
+                <div class="rmodal-body">
+
+                    <!-- Full Name -->
+                    <div class="rform-group">
+                        <label class="rform-label">Full Name <span class="rreq">*</span></label>
+                        <input id="r-name" type="text" class="rform-input" placeholder="Enter patient name" autocomplete="off" />
+                    </div>
+
+                    <!-- DoB + Age -->
+                    <div class="rform-row">
+                        <div class="rform-group">
+                            <label class="rform-label">Date of Birth <span class="rreq">*</span></label>
+                            <input id="r-dob" type="date" class="rform-input" />
+                        </div>
+                        <div class="rform-group">
+                            <label class="rform-label">Age</label>
+                            <input id="r-age" type="number" class="rform-input" placeholder="Years" min="0" max="120" />
+                        </div>
+                    </div>
+
+                    <!-- Gender -->
+                    <div class="rform-group">
+                        <label class="rform-label">Gender <span class="rreq">*</span></label>
+                        <div class="rradio-group">
+                            <label class="rradio-opt">
+                                <input type="radio" name="r-gender" value="Male" />
+                                <span class="rradio-label">Male</span>
+                            </label>
+                            <label class="rradio-opt">
+                                <input type="radio" name="r-gender" value="Female" />
+                                <span class="rradio-label">Female</span>
+                            </label>
+                            <label class="rradio-opt">
+                                <input type="radio" name="r-gender" value="Other" />
+                                <span class="rradio-label">Other</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Weight -->
+                    <div class="rform-group">
+                        <label class="rform-label">Weight (kg)</label>
+                        <input id="r-weight" type="number" class="rform-input" placeholder="e.g. 65" min="1" max="300" />
+                    </div>
+
+                    <!-- Error -->
+                    <p id="r-error" class="r-error-msg"></p>
+
+                    <hr class="rmodal-divider" />
+
+                    <!-- Download Button -->
+                    <button class="rbtn-download" onclick="handleReportDownload()">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                        </svg>
+                        Download Report
+                    </button>
+
+                    <!-- Success -->
+                    <div id="r-success" class="r-success">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                        </svg>
+                        Report downloaded successfully!
+                    </div>
+
+                </div>
+            </div>
+    </div>
     <script src="script.js"></script>
 </body>
 </html>
