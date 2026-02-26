@@ -75,17 +75,7 @@ function removeFile() {
     document.getElementById('formats').classList.remove('hidden');
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// MAIN DETECTION FUNCTION  (updated for /analyze-mri endpoint)
-//
-// Old endpoint : POST /detect
-//   response   : { result_image_url, confidence, counts:{Normal,Bulging,Herniation} }
-//
-// New endpoint : POST /analyze-mri
-//   response   : { output_image_url, overall_confidence,
-//                  class_counts:{Normal,Bulging,Herniation},
-//                  detections, risk_level }
-// ────────────────────────────────────────────────────────────────────────────
+
 async function analyzeImage(event) {
     if (event) {
         event.preventDefault();
@@ -266,6 +256,117 @@ async function analyzeImage(event) {
     }
 }
 
+// ── Open Modal ──
+function openModal() {
+const overlay = document.getElementById('modal-overlay');
+overlay.classList.add('active');
+document.body.style.overflow = 'hidden';
+
+// Reset form state
+resetForm();
+
+// Auto-fill today's date
+const today = new Date().toISOString().split('T')[0];
+document.getElementById('p-dob').value = today;
+}
+
+// ── Close Modal ──
+function closeModal() {
+const overlay = document.getElementById('modal-overlay');
+overlay.classList.remove('active');
+document.body.style.overflow = '';
+}
+
+// ── Click outside to close ──
+function handleOverlayClick(e) {
+if (e.target === document.getElementById('modal-overlay')) {
+closeModal();
+}
+}
+
+// ── Close on Escape key ──
+document.addEventListener('keydown', function (e) {
+if (e.key === 'Escape') closeModal();
+});
+
+// ── Reset form ──
+function resetForm() {
+document.getElementById('p-name').value = '';
+document.getElementById('p-dob').value = '';
+document.getElementById('p-age').value = '';
+document.getElementById('p-weight').value = '';
+
+// Clear radio
+const radios = document.querySelectorAll('input[name="gender"]');
+radios.forEach(r => (r.checked = false));
+
+// Clear error / success
+document.getElementById('form-error').classList.remove('show');
+document.getElementById('form-error').textContent = '';
+document.getElementById('success-msg').classList.remove('show');
+
+// Clear any input error styles
+document.querySelectorAll('.form-group input').forEach(input => {
+input.classList.remove('error');
+});
+}
+
+// ── Validate & Download ──
+function handleDownload() {
+const name   = document.getElementById('p-name').value.trim();
+const dob    = document.getElementById('p-dob').value;
+const gender = document.querySelector('input[name="gender"]:checked');
+
+const errorEl  = document.getElementById('form-error');
+const successEl = document.getElementById('success-msg');
+
+// Clear previous errors
+errorEl.classList.remove('show');
+errorEl.textContent = '';
+successEl.classList.remove('show');
+document.querySelectorAll('.form-group input').forEach(i => i.classList.remove('error'));
+
+// Validation
+if (!name) {
+showError('Full Name is required.', 'p-name');
+return;
+}
+if (!dob) {
+showError('Date of Birth is required.', 'p-dob');
+return;
+}
+if (!gender) {
+errorEl.textContent = 'Please select a gender.';
+errorEl.classList.add('show');
+return;
+}
+
+// All good — trigger download (placeholder)
+console.log('Generating report for:', {
+name,
+dob,
+age:    document.getElementById('p-age').value,
+gender: gender.value,
+weight: document.getElementById('p-weight').value,
+});
+
+// Show success
+successEl.classList.add('show');
+}
+
+// ── Helper: show error ──
+function showError(message, inputId) {
+    const errorEl = document.getElementById('form-error');
+    errorEl.textContent = message;
+    errorEl.classList.add('show');
+
+    if (inputId) {
+        const input = document.getElementById(inputId);
+        input.classList.add('error');
+        input.focus();
+    }
+}
+
 // Dark Mode Toggle
 function toggleDarkMode() {
     document.documentElement.classList.toggle('dark');
@@ -285,3 +386,81 @@ function toggleMobileMenu() {
     document.getElementById("menu-icon").classList.toggle("hidden", !isOpen);
     document.getElementById("close-icon").classList.toggle("hidden", isOpen);
 }
+
+
+function openReportModal() {
+            const overlay = document.getElementById('report-modal-overlay');
+            overlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+
+            // Reset form
+            document.getElementById('r-name').value = '';
+            document.getElementById('r-dob').value = new Date().toISOString().split('T')[0];
+            document.getElementById('r-age').value = '';
+            document.getElementById('r-weight').value = '';
+            document.querySelectorAll('input[name="r-gender"]').forEach(r => r.checked = false);
+            document.getElementById('r-error').classList.remove('show');
+            document.getElementById('r-error').textContent = '';
+            document.getElementById('r-success').classList.remove('show');
+            document.querySelectorAll('.rform-input').forEach(i => i.classList.remove('r-error'));
+        }
+
+        function closeReportModal() {
+            document.getElementById('report-modal-overlay').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        function handleReportOverlayClick(e) {
+            if (e.target === document.getElementById('report-modal-overlay')) {
+                closeReportModal();
+            }
+        }
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closeReportModal();
+        });
+
+        function handleReportDownload() {
+            const name   = document.getElementById('r-name').value.trim();
+            const dob    = document.getElementById('r-dob').value;
+            const gender = document.querySelector('input[name="r-gender"]:checked');
+            const errorEl   = document.getElementById('r-error');
+            const successEl = document.getElementById('r-success');
+
+            // Clear previous state
+            errorEl.classList.remove('show');
+            errorEl.textContent = '';
+            successEl.classList.remove('show');
+            document.querySelectorAll('.rform-input').forEach(i => i.classList.remove('r-error'));
+
+            // Validate
+            if (!name) {
+                errorEl.textContent = 'Full Name is required.';
+                errorEl.classList.add('show');
+                document.getElementById('r-name').classList.add('r-error');
+                document.getElementById('r-name').focus();
+                return;
+            }
+            if (!dob) {
+                errorEl.textContent = 'Date of Birth is required.';
+                errorEl.classList.add('show');
+                document.getElementById('r-dob').classList.add('r-error');
+                return;
+            }
+            if (!gender) {
+                errorEl.textContent = 'Please select a gender.';
+                errorEl.classList.add('show');
+                return;
+            }
+
+            // All valid — trigger your actual download/report logic here
+            console.log('Report data:', {
+                name,
+                dob,
+                age:    document.getElementById('r-age').value,
+                gender: gender.value,
+                weight: document.getElementById('r-weight').value,
+            });
+
+            successEl.classList.add('show');
+        }
