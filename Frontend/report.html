@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lumbar Spine Damage Detection Report</title>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@300;400;600;700&family=DM+Mono:wght@400;500&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    /* ═══════════════════════════════════════════════
+       VARIABLES
+    ═══════════════════════════════════════════════ */
+    :root {
+      --navy      : #0d1b2a;
+      --blue      : #1a3a5c;
+      --accent    : #2176ae;
+      --light-blue: #e8f4fd;
+      --normal    : #1a7a4a;
+      --bulging   : #c17f00;
+      --herniation: #c0392b;
+      --notfound  : #6c757d;
+      --border    : #d0dce8;
+      --bg        : #f0f4f8;
+      --white     : #ffffff;
+      --text      : #1a2636;
+      --subtext   : #4a5568;
+    }
+
+    /* ═══════════════════════════════════════════════
+       RESET
+    ═══════════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ═══════════════════════════════════════════════
+       PRINT — strict A4, no browser margins
+    ═══════════════════════════════════════════════ */
+    @page { size: A4; margin: 0; }
+
+    @media print {
+      body        { background: white; }
+      .print-btn  { display: none !important; }
+      .page       { box-shadow: none; margin: 0; }
+    }
+
+    /* ═══════════════════════════════════════════════
+       BODY
+    ═══════════════════════════════════════════════ */
+    body {
+      font-family: 'Figtree', sans-serif;
+      background : var(--bg);
+      color      : var(--text);
+      font-size  : 12.5px;
+      line-height: 1.55;
+    }
+
+    /* ═══════════════════════════════════════════════
+       PAGE — exact A4, two pages
+    ═══════════════════════════════════════════════ */
+    .page {
+      width            : 210mm;
+      height           : 297mm;
+      margin           : 24px auto;
+      background       : var(--white);
+      position         : relative;
+      overflow         : hidden;
+      page-break-after : always;
+      box-shadow       : 0 4px 32px rgba(0,0,0,0.13);
+    }
+
+    /* ═══════════════════════════════════════════════
+       SHARED HEADER (appears on both pages)
+    ═══════════════════════════════════════════════ */
+    .header {
+      background: var(--navy);
+      padding   : 20px 32px 16px;
+      position  : relative;
+      overflow  : hidden;
+    }
+
+    .header::before {
+      content      : "";
+      position     : absolute;
+      top:-40px; right:-40px;
+      width:180px; height:180px;
+      border-radius: 50%;
+      background   : rgba(33,118,174,0.14);
+    }
+
+    .header::after {
+      content      : "";
+      position     : absolute;
+      bottom:-20px; left:35%;
+      width:130px; height:130px;
+      border-radius: 50%;
+      background   : rgba(33,118,174,0.07);
+    }
+
+    .header-top {
+      display        : flex;
+      justify-content: space-between;
+      align-items    : flex-start;
+    }
+
+    .header-brand {
+      display    : flex;
+      align-items: center;
+      gap        : 12px;
+    }
+
+    .brand-icon {
+      width        : 42px; height: 42px;
+      background   : var(--accent);
+      border-radius: 9px;
+      display      : flex; align-items: center; justify-content: center;
+      font-size    : 20px;
+      flex-shrink  : 0;
+    }
+
+    .brand-text h1 {
+      font-family   : 'Source Serif 4', serif;
+      font-size     : 17px;
+      font-weight   : 700;
+      color         : var(--white);
+      letter-spacing: -0.3px;
+    }
+
+    .brand-text p {
+      font-size  : 10px;
+      color      : rgba(255,255,255,0.55);
+      font-family: 'DM Mono', monospace;
+      margin-top : 2px;
+      letter-spacing: 0.5px;
+    }
+
+    .header-meta {
+      text-align: right;
+    }
+
+    .det-id-label {
+      font-family   : 'DM Mono', monospace;
+      font-size     : 10px;
+      color         : rgba(255,255,255,0.45);
+      letter-spacing: 0.5px;
+    }
+
+    .det-id-label span {
+      color      : #5bb8f5;
+      font-weight: 500;
+    }
+
+    .page-num-label {
+      font-family   : 'DM Mono', monospace;
+      font-size     : 9px;
+      color         : rgba(255,255,255,0.35);
+      letter-spacing: 0.5px;
+      margin-top    : 4px;
+    }
+
+    .header-divider {
+      height    : 1px;
+      background: rgba(255,255,255,0.1);
+      margin    : 12px 0 10px;
+    }
+
+    .header-info-row {
+      display: flex;
+      gap    : 28px;
+    }
+
+    .header-info-item label {
+      font-size     : 9.5px;
+      color         : rgba(255,255,255,0.42);
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      font-family   : 'DM Mono', monospace;
+      display       : block;
+    }
+
+    .header-info-item value {
+      font-size  : 11.5px;
+      color      : rgba(255,255,255,0.88);
+      font-weight: 500;
+    }
+
+    /* ═══════════════════════════════════════════════
+       CONFIDENTIAL BANNER
+    ═══════════════════════════════════════════════ */
+    .conf-banner {
+      background: var(--accent);
+      padding   : 4px 32px;
+      display   : flex;
+      align-items: center;
+      gap       : 8px;
+    }
+
+    .conf-banner span {
+      font-family   : 'DM Mono', monospace;
+      font-size     : 9.5px;
+      color         : white;
+      letter-spacing: 1.4px;
+      font-weight   : 500;
+    }
+
+    .conf-dot {
+      width        : 4px; height: 4px;
+      background   : rgba(255,255,255,0.55);
+      border-radius: 50%;
+    }
+
+    /* ═══════════════════════════════════════════════
+       CONTENT
+    ═══════════════════════════════════════════════ */
+    .content {
+      padding: 20px 32px;
+    }
+
+    .section {
+      margin-bottom: 18px;
+    }
+
+    .section-title {
+      font-family   : 'Source Serif 4', serif;
+      font-size     : 13px;
+      font-weight   : 700;
+      color         : var(--blue);
+      border-bottom : 2px solid var(--accent);
+      padding-bottom: 5px;
+      margin-bottom : 10px;
+      display       : flex;
+      align-items   : center;
+      gap           : 7px;
+    }
+
+    /* ═══════════════════════════════════════════════
+       PATIENT DETAILS — TABLE FORMAT
+    ═══════════════════════════════════════════════ */
+    .patient-table {
+      width           : 100%;
+      border-collapse : collapse;
+      border          : 1px solid var(--border);
+      border-radius   : 8px;
+      overflow        : hidden;
+    }
+
+    .patient-table thead tr {
+      background: var(--navy);
+    }
+
+    .patient-table thead th {
+      padding       : 9px 14px;
+      text-align    : left;
+      font-size     : 10px;
+      font-weight   : 600;
+      color         : rgba(255,255,255,0.8);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      font-family   : 'DM Mono', monospace;
+    }
+
+    .patient-table tbody td {
+      padding      : 9px 14px;
+      font-size    : 12.5px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .patient-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .patient-table tbody tr:nth-child(even) {
+      background: var(--light-blue);
+    }
+
+    .patient-table td.field-name {
+      font-family   : 'DM Mono', monospace;
+      font-size     : 10.5px;
+      color         : var(--subtext);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      width         : 35%;
+      background    : #f0f6fb !important;
+      font-weight   : 500;
+    }
+
+    .patient-table td.field-value {
+      font-weight: 600;
+      color      : var(--navy);
+    }
+
+    /* ═══════════════════════════════════════════════
+       IMAGES
+    ═══════════════════════════════════════════════ */
+    .images-row {
+      display              : grid;
+      grid-template-columns: 1fr 1fr;
+      gap                  : 14px;
+    }
+
+    .image-card {
+      border       : 1px solid var(--border);
+      border-radius: 9px;
+      overflow     : hidden;
+    }
+
+    .image-card-hdr {
+      background  : var(--navy);
+      padding     : 7px 12px;
+      display     : flex;
+      align-items : center;
+      gap         : 7px;
+    }
+
+    .image-card-hdr span {
+      font-size  : 10.5px;
+      font-weight: 600;
+      color      : white;
+    }
+
+    .image-card-hdr .badge {
+      font-family: 'DM Mono', monospace;
+      font-size  : 9px;
+      background : rgba(255,255,255,0.14);
+      color      : rgba(255,255,255,0.75);
+      padding    : 2px 7px;
+      border-radius: 20px;
+      margin-left: auto;
+    }
+
+    .img-placeholder {
+      background    : #eef3f8;
+      height        : 150px;
+      display       : flex;
+      flex-direction: column;
+      align-items   : center;
+      justify-content: center;
+      gap           : 6px;
+    }
+
+    .img-placeholder .ph-icon { font-size: 28px; opacity: 0.35; }
+    .img-placeholder p         { font-size: 10px; color: var(--subtext); opacity: 0.65; }
+
+    .image-card img {
+      width          : 100%;
+      height         : 150px;
+      object-fit     : contain;
+      background     : #eef3f8;
+      display        : block;
+    }
+
+    .image-card-ftr {
+      padding    : 5px 12px;
+      background : var(--light-blue);
+      border-top : 1px solid var(--border);
+    }
+
+    .image-card-ftr p {
+      font-size  : 9.5px;
+      color      : var(--subtext);
+      font-family: 'DM Mono', monospace;
+    }
+
+    /* ═══════════════════════════════════════════════
+       DETECTION RESULTS TABLE
+    ═══════════════════════════════════════════════ */
+    .results-table {
+      width           : 100%;
+      border-collapse : collapse;
+      border          : 1px solid var(--border);
+      border-radius   : 9px;
+      overflow        : hidden;
+    }
+
+    .results-table thead tr { background: var(--navy); }
+
+    .results-table thead th {
+      padding       : 9px 13px;
+      text-align    : left;
+      font-size     : 10px;
+      font-weight   : 600;
+      color         : rgba(255,255,255,0.82);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      font-family   : 'DM Mono', monospace;
+    }
+
+    .results-table tbody tr { border-bottom: 1px solid var(--border); }
+    .results-table tbody tr:last-child { border-bottom: none; }
+    .results-table tbody tr:nth-child(even) { background: var(--light-blue); }
+    .results-table tbody td { padding: 9px 13px; font-size: 12px; }
+
+    .disc-cell {
+      font-family: 'DM Mono', monospace;
+      font-weight: 500;
+      color      : var(--navy);
+      font-size  : 11.5px !important;
+    }
+
+    .badge-normal     { display:inline-flex;align-items:center;gap:5px;background:#e6f7ee;color:var(--normal);border:1px solid #b7e4ca;padding:2px 9px;border-radius:20px;font-size:10.5px;font-weight:600; }
+    .badge-bulging    { display:inline-flex;align-items:center;gap:5px;background:#fff8e6;color:var(--bulging);border:1px solid #ffd97a;padding:2px 9px;border-radius:20px;font-size:10.5px;font-weight:600; }
+    .badge-herniation { display:inline-flex;align-items:center;gap:5px;background:#fdf0ef;color:var(--herniation);border:1px solid #f5b7b1;padding:2px 9px;border-radius:20px;font-size:10.5px;font-weight:600; }
+    .badge-notdetected{ display:inline-flex;align-items:center;gap:5px;background:#f4f5f7;color:var(--notfound);border:1px solid #d0d5dd;padding:2px 9px;border-radius:20px;font-size:10.5px;font-weight:600; }
+
+    .conf-bar-wrap { display:flex;align-items:center;gap:7px; }
+    .conf-bar      { height:5px;border-radius:3px;background:var(--border);width:55px;overflow:hidden; }
+    .conf-bar-fill { height:100%;border-radius:3px; }
+    .conf-text     { font-family:'DM Mono',monospace;font-size:10.5px;font-weight:500; }
+
+    /* ═══════════════════════════════════════════════
+       SUMMARY GRID
+    ═══════════════════════════════════════════════ */
+    .summary-grid {
+      display              : grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap                  : 9px;
+      margin-bottom        : 12px;
+    }
+
+    .sum-card {
+      border-radius: 8px;
+      padding      : 10px 8px;
+      text-align   : center;
+      border       : 1px solid var(--border);
+    }
+
+    .sum-card.total       { background:var(--light-blue); border-color:#b8d4ee; }
+    .sum-card.normal      { background:#e6f7ee; border-color:#b7e4ca; }
+    .sum-card.bulging     { background:#fff8e6; border-color:#ffd97a; }
+    .sum-card.herniation  { background:#fdf0ef; border-color:#f5b7b1; }
+    .sum-card.notdetected { background:#f4f5f7; border-color:#d0d5dd; }
+
+    .sum-card .num { font-family:'Source Serif 4',serif;font-size:24px;font-weight:700;line-height:1;display:block; }
+    .sum-card.total .num       { color:var(--accent); }
+    .sum-card.normal .num      { color:var(--normal); }
+    .sum-card.bulging .num     { color:var(--bulging); }
+    .sum-card.herniation .num  { color:var(--herniation); }
+    .sum-card.notdetected .num { color:var(--notfound); }
+
+    .sum-card .lbl { font-size:9.5px;text-transform:uppercase;letter-spacing:0.4px;color:var(--subtext);font-family:'DM Mono',monospace;margin-top:4px;display:block; }
+
+    /* Status banner */
+    .status-banner         { border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;border:1px solid; }
+    .status-banner.critical     { background:#fdf0ef; border-color:#f5b7b1; }
+    .status-banner.attention    { background:#fff8e6; border-color:#ffd97a; }
+    .status-banner.normal-status{ background:#e6f7ee; border-color:#b7e4ca; }
+    .status-icon     { font-size:20px; }
+    .status-text strong{ font-size:12.5px;font-weight:700;display:block; }
+    .status-text p     { font-size:11px;color:var(--subtext);margin-top:2px; }
+
+    /* ═══════════════════════════════════════════════
+       MEDICAL EXPLANATIONS
+    ═══════════════════════════════════════════════ */
+    .exp-grid {
+      display              : grid;
+      grid-template-columns: 1fr 1fr;
+      gap                  : 9px;
+    }
+
+    .exp-card {
+      border-radius: 8px;
+      padding      : 10px 13px;
+      border-left  : 3px solid;
+    }
+
+    .exp-card.normal      { background:#f0fbf5; border-color:var(--normal); }
+    .exp-card.bulging     { background:#fffbf0; border-color:var(--bulging); }
+    .exp-card.herniation  { background:#fdf5f5; border-color:var(--herniation); }
+    .exp-card.notdetected { background:#f7f8fa; border-color:var(--notfound); }
+
+    .exp-card h4 { font-size:11.5px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:5px; }
+    .exp-card.normal h4      { color:var(--normal); }
+    .exp-card.bulging h4     { color:var(--bulging); }
+    .exp-card.herniation h4  { color:var(--herniation); }
+    .exp-card.notdetected h4 { color:var(--notfound); }
+    .exp-card p { font-size:10.5px;color:var(--subtext);line-height:1.5; }
+
+    /* ═══════════════════════════════════════════════
+       METADATA TABLE
+    ═══════════════════════════════════════════════ */
+    .meta-table {
+      width           : 100%;
+      border-collapse : collapse;
+      border          : 1px solid var(--border);
+      border-radius   : 8px;
+      overflow        : hidden;
+    }
+
+    .meta-table tr { border-bottom: 1px solid var(--border); }
+    .meta-table tr:last-child { border-bottom: none; }
+
+    .meta-table td {
+      padding  : 7px 12px;
+      font-size: 12px;
+    }
+
+    .meta-table td:first-child {
+      font-family   : 'DM Mono', monospace;
+      font-size     : 10px;
+      color         : var(--subtext);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      width         : 42%;
+      background    : var(--light-blue);
+    }
+
+    .meta-table td:last-child { font-weight:600; color:var(--navy); }
+
+    /* ═══════════════════════════════════════════════
+       DISCLAIMER
+    ═══════════════════════════════════════════════ */
+    .disclaimer {
+      background   : #fff8e6;
+      border       : 1px solid #ffd97a;
+      border-radius: 8px;
+      padding      : 10px 14px;
+    }
+
+    .disclaimer strong { font-size:11px;display:block;margin-bottom:3px;color:#5a3a00; }
+    .disclaimer p      { font-size:10px;color:#7a5000;line-height:1.5; }
+
+    /* ═══════════════════════════════════════════════
+       FOOTER
+    ═══════════════════════════════════════════════ */
+    .footer {
+      background: var(--navy);
+      padding   : 10px 32px;
+      display   : flex;
+      align-items: center;
+      justify-content: space-between;
+      position  : absolute;
+      bottom    : 0;
+      left      : 0; right: 0;
+    }
+
+    .footer-left {
+      display    : flex;
+      align-items: center;
+      gap        : 8px;
+    }
+
+    .footer-left span,
+    .footer-conf,
+    .footer-page {
+      font-family   : 'DM Mono', monospace;
+      font-size     : 9px;
+      color         : rgba(255,255,255,0.45);
+      letter-spacing: 0.5px;
+    }
+
+    /* ═══════════════════════════════════════════════
+       PRINT BUTTON (screen only)
+    ═══════════════════════════════════════════════ */
+    /* .print-btn {
+      position     : fixed;
+      bottom       : 24px;
+      right        : 24px;
+      background   : var(--accent);
+      color        : white;
+      border       : none;
+      padding      : 11px 20px;
+      border-radius: 8px;
+      font-family  : 'Figtree', sans-serif;
+      font-size    : 13px;
+      font-weight  : 600;
+      cursor       : pointer;
+      box-shadow   : 0 4px 16px rgba(33,118,174,0.4);
+      display      : flex;
+      align-items  : center;
+      gap          : 7px;
+      z-index      : 999;
+      transition   : transform 0.15s, box-shadow 0.15s;
+    }
+
+    .print-btn:hover {
+      transform : translateY(-2px);
+      box-shadow: 0 6px 20px rgba(33,118,174,0.5);
+    } */
+  </style>
+</head>
+<body>
+
+<!-- Print Button -->
+<!-- <button class="print-btn" onclick="window.print()">🖨️ Download / Print PDF</button> -->
+
+<!-- ╔══════════════════════════════════════════════════════╗
+     ║  PAGE 1                                              ║
+     ║  Header · Patient Details · Images · Results Table  ║
+     ╚══════════════════════════════════════════════════════╝ -->
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-top">
+      <div class="header-brand">
+        <div class="brand-icon">🦴</div>
+        <div class="brand-text">
+          <h1>Lumbar Spine Damage Detection Report</h1>
+          <p>AI SPINE DIAGNOSTIC SYSTEM</p>
+        </div>
+      </div>
+      <div class="header-meta">
+        <div class="det-id-label">Detection ID &nbsp;<span id="p1-det-id">abc123</span></div>
+        <div class="page-num-label">PAGE 1 OF 2</div>
+      </div>
+    </div>
+    <div class="header-divider"></div>
+    <div class="header-info-row">
+      <div class="header-info-item">
+        <label>Report Generated</label>
+        <value id="p1-generated">2026-02-26 06:53:44</value>
+      </div>
+      <div class="header-info-item">
+        <label>Detection Date / Time</label>
+        <value id="p1-det-date">2025-06-01 14:32:10</value>
+      </div>
+      <div class="header-info-item">
+        <label>AI Model</label>
+        <value>YOLOv8s</value>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONFIDENTIAL BANNER -->
+  <div class="conf-banner">
+    <span>🔒 CONFIDENTIAL</span>
+    <div class="conf-dot"></div>
+    <span>AI SPINE DIAGNOSTIC SYSTEM</span>
+    <div class="conf-dot"></div>
+    <span>FOR AUTHORISED USE ONLY</span>
+  </div>
+
+  <div class="content">
+
+    <!-- SECTION 1 — Patient Details (SINGLE COLUMN TABLE) -->
+    <div class="section">
+      <div class="section-title"><span>👤</span> Patient Details</div>
+      <table class="patient-table">
+        <thead>
+          <tr>
+            <th>Field</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="field-name">Full Name</td>
+            <td class="field-value" id="pt-name"></td>
+          </tr>
+          <tr>
+            <td class="field-name">Date of Birth</td>
+            <td class="field-value" id="pt-dob"></td>
+          </tr>
+          <tr>
+            <td class="field-name">Age</td>
+            <td class="field-value" id="pt-age"></td>
+          </tr>
+          <tr>
+            <td class="field-name">Gender</td>
+            <td class="field-value" id="pt-gender"></td>
+          </tr>
+          <tr>
+            <td class="field-name">Weight</td>
+            <td class="field-value" id="pt-weight"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- SECTION 2 — MRI Scan Images -->
+    <div class="section">
+      <div class="section-title"><span>🖼️</span> MRI Scan Images</div>
+      <div class="images-row">
+
+        <!-- Original -->
+        <div class="image-card">
+          <div class="image-card-hdr">
+            <span>Original MRI Image</span>
+            <span class="badge">UPLOADED SCAN</span>
+          </div>
+          <div class="img-placeholder" id="orig-placeholder">
+            <div class="ph-icon">🩻</div>
+            <p>Original scan prior to AI processing</p>
+          </div>
+          <div class="image-card-ftr">
+            <p>File: <span id="orig-filename">N/A</span></p>
+          </div>
+        </div>
+
+        <!-- Annotated -->
+        <div class="image-card">
+          <div class="image-card-hdr">
+            <span>Detection Result Image</span>
+            <span class="badge">AI ANNOTATED</span>
+          </div>
+          <div class="img-placeholder" id="det-placeholder">
+            <div class="ph-icon">🎯</div>
+            <p>AI-annotated scan with bounding boxes</p>
+          </div>
+          <div class="image-card-ftr">
+            <p>File: <span id="det-filename">N/A</span></p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- SECTION 3 — Detection Results Table -->
+    <div class="section">
+      <div class="section-title"><span>🔍</span> Detection Results</div>
+      <table class="results-table">
+        <thead>
+          <tr>
+            <th>Disc Level</th>
+            <th>Condition</th>
+            <th>Confidence Score</th>
+            <th>Confidence %</th>
+          </tr>
+        </thead>
+        <tbody id="results-tbody">
+          <tr>
+            <td class="disc-cell">L1 – L2</td>
+            <td><span class="badge-normal">✅ Normal</span></td>
+            <td><div class="conf-bar-wrap"><div class="conf-bar"><div class="conf-bar-fill" style="width:91%;background:var(--normal)"></div></div><span class="conf-text" style="color:var(--normal)">0.91</span></div></td>
+            <td><strong>91.0%</strong></td>
+          </tr>
+          <tr>
+            <td class="disc-cell">L2 – L3</td>
+            <td><span class="badge-bulging">⚠️ Bulging</span></td>
+            <td><div class="conf-bar-wrap"><div class="conf-bar"><div class="conf-bar-fill" style="width:87%;background:var(--bulging)"></div></div><span class="conf-text" style="color:var(--bulging)">0.87</span></div></td>
+            <td><strong>87.0%</strong></td>
+          </tr>
+          <tr>
+            <td class="disc-cell">L3 – L4</td>
+            <td><span class="badge-herniation">🔴 Herniation</span></td>
+            <td><div class="conf-bar-wrap"><div class="conf-bar"><div class="conf-bar-fill" style="width:82%;background:var(--herniation)"></div></div><span class="conf-text" style="color:var(--herniation)">0.82</span></div></td>
+            <td><strong>82.0%</strong></td>
+          </tr>
+          <tr>
+            <td class="disc-cell">L4 – L5</td>
+            <td><span class="badge-normal">✅ Normal</span></td>
+            <td><div class="conf-bar-wrap"><div class="conf-bar"><div class="conf-bar-fill" style="width:76%;background:var(--normal)"></div></div><span class="conf-text" style="color:var(--normal)">0.76</span></div></td>
+            <td><strong>76.0%</strong></td>
+          </tr>
+          <tr>
+            <td class="disc-cell">L5 – S1</td>
+            <td><span class="badge-notdetected">❓ Not Detected</span></td>
+            <td><div class="conf-bar-wrap"><div class="conf-bar"><div class="conf-bar-fill" style="width:0%;background:var(--notfound)"></div></div><span class="conf-text" style="color:var(--notfound)">N/A</span></div></td>
+            <td><strong>N/A</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div><!-- end content p1 -->
+
+  <!-- FOOTER P1 -->
+  <div class="footer">
+    <div class="footer-left">
+      <span>AI SPINE DIAGNOSTIC SYSTEM</span>
+      <span>•</span>
+      <span>Detection ID: <span id="foot1-det-id">abc123</span></span>
+    </div>
+    <span class="footer-conf">🔒 CONFIDENTIAL</span>
+    <span class="footer-page">Page 1 | CONFIDENTIAL</span>
+  </div>
+
+</div><!-- end page 1 -->
+
+
+<!-- ╔══════════════════════════════════════════════════════╗
+     ║  PAGE 2                                              ║
+     ║  Summary · Medical Explanation · Metadata · Disclaimer ║
+     ╚══════════════════════════════════════════════════════╝ -->
+<div class="page">
+
+  <!-- HEADER P2 -->
+  <div class="header">
+    <div class="header-top">
+      <div class="header-brand">
+        <div class="brand-icon">🦴</div>
+        <div class="brand-text">
+          <h1>Lumbar Spine Damage Detection Report</h1>
+          <p>AI SPINE DIAGNOSTIC SYSTEM</p>
+        </div>
+      </div>
+      <div class="header-meta">
+        <div class="det-id-label">Detection ID &nbsp;<span id="p2-det-id">abc123</span></div>
+        <div class="page-num-label">PAGE 2 OF 2</div>
+      </div>
+    </div>
+    <div class="header-divider"></div>
+    <div class="header-info-row">
+      <div class="header-info-item">
+        <label>Report Generated</label>
+        <value id="p2-generated">2026-02-26 06:53:44</value>
+      </div>
+      <div class="header-info-item">
+        <label>Detection Date / Time</label>
+        <value id="p2-det-date">2025-06-01 14:32:10</value>
+      </div>
+      <div class="header-info-item">
+        <label>AI Model</label>
+        <value>YOLOv8s</value>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONFIDENTIAL BANNER P2 -->
+  <div class="conf-banner">
+    <span>🔒 CONFIDENTIAL</span>
+    <div class="conf-dot"></div>
+    <span>AI SPINE DIAGNOSTIC SYSTEM</span>
+    <div class="conf-dot"></div>
+    <span>FOR AUTHORISED USE ONLY</span>
+  </div>
+
+  <div class="content">
+
+    <!-- SECTION 4 — Detection Summary -->
+    <div class="section">
+      <div class="section-title"><span>📊</span> Detection Summary</div>
+      <div class="summary-grid">
+        <div class="sum-card total">
+          <span class="num" id="sum-total">5</span>
+          <span class="lbl">Total Discs</span>
+        </div>
+        <div class="sum-card normal">
+          <span class="num" id="sum-normal">2</span>
+          <span class="lbl">Normal</span>
+        </div>
+        <div class="sum-card bulging">
+          <span class="num" id="sum-bulging">1</span>
+          <span class="lbl">Bulging</span>
+        </div>
+        <div class="sum-card herniation">
+          <span class="num" id="sum-herniation">1</span>
+          <span class="lbl">Herniation</span>
+        </div>
+        <div class="sum-card notdetected">
+          <span class="num" id="sum-notdetected">1</span>
+          <span class="lbl">Not Detected</span>
+        </div>
+      </div>
+
+      <!-- Overall Status Banner -->
+      <div class="status-banner critical" id="status-banner">
+        <span class="status-icon">🚨</span>
+        <div class="status-text">
+          <strong id="status-title">Overall Status: Critical</strong>
+          <p id="status-desc">
+            The AI model identified abnormalities in 2 of 5 analysed disc level(s):
+            1 disc(s) show signs of Herniation; 1 disc(s) show Bulging.
+            Clinical correlation and radiologist review are strongly recommended.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 5 — Medical Explanation -->
+    <div class="section">
+      <div class="section-title"><span>📖</span> Medical Explanation of Detected Conditions</div>
+      <div class="exp-grid">
+        <div class="exp-card normal">
+          <h4>✅ Normal</h4>
+          <p>The disc appears intact with no visible signs of degeneration, herniation, or bulging. Height and signal intensity are within normal limits.</p>
+        </div>
+        <div class="exp-card bulging">
+          <h4>⚠️ Bulging</h4>
+          <p>A bulging disc occurs when the outer fibrous ring (annulus fibrosus) weakens and extends beyond the normal disc boundary without rupturing. This may cause localised back pain or mild nerve compression.</p>
+        </div>
+        <div class="exp-card herniation">
+          <h4>🔴 Herniation</h4>
+          <p>Disc herniation occurs when the nucleus pulposus protrudes through a tear in the annulus fibrosus. This can compress adjacent nerve roots, resulting in radiculopathy, sciatica, or motor/sensory deficits.</p>
+        </div>
+        <div class="exp-card notdetected">
+          <h4>❓ Not Detected</h4>
+          <p>The model could not reliably identify this disc level in the provided image. This may be due to image quality, positioning, or anatomical variation. A radiologist review is recommended.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 7 — Disclaimer -->
+    <div class="section">
+      <div class="disclaimer">
+        <strong>⚠️ DISCLAIMER</strong>
+        <p>
+          This report is AI-generated and intended for informational purposes only.
+          It does not constitute medical advice, diagnosis, or treatment.
+          The results should not be used as a substitute for professional medical evaluation.
+          Always consult a qualified medical professional or licensed radiologist for
+          interpretation of medical imaging and clinical decision-making.
+        </p>
+      </div>
+    </div>
+
+  </div><!-- end content p2 -->
+
+  <!-- FOOTER P2 -->
+  <div class="footer">
+    <div class="footer-left">
+      <span>AI SPINE DIAGNOSTIC SYSTEM</span>
+      <span>•</span>
+      <span>Detection ID: <span id="foot2-det-id">abc123</span></span>
+    </div>
+    <span class="footer-conf">🔒 CONFIDENTIAL</span>
+    <span class="footer-page">Page 2 | CONFIDENTIAL</span>
+  </div>
+
+</div><!-- end page 2 -->
+
+
+<!-- ═══════════════════════════════════════════════════════
+     JAVASCRIPT — Call populateReport(data) with API response
+═══════════════════════════════════════════════════════ -->
+<script src="script.js"></script>
+
+</body>
+</html>

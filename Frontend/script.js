@@ -1,3 +1,10 @@
+let data = {};
+let eval_data = {};
+let PatientDetails = {};
+
+let complete_objdetails = {};
+let originalImageFile = null;
+
 // SpineAI JavaScript
 document.addEventListener('DOMContentLoaded', () => {
     // Restore page
@@ -30,6 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     fileInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
+        originalImageFile = file;
         if (file) handleFile(file);
     });
 });
@@ -107,7 +115,7 @@ async function analyzeImage(event) {
         const formData = new FormData();
         formData.append("file", file);
 
-        // ── Changed: endpoint /detect → /analyze-mri ──────────────────────
+        
         const response = await fetch("http://127.0.0.1:8000/predict/full/", {
             method: "POST",
             body: formData
@@ -118,7 +126,7 @@ async function analyzeImage(event) {
             throw new Error(err.detail || `Server error ${response.status}`);
         }
 
-        const data = await response.json();
+        data = await response.json();
 
         // ── Navigate to results page ──────────────────────────────────────
         showPage("results");
@@ -139,12 +147,34 @@ async function analyzeImage(event) {
         // New: data.overall_confidence  (0–1 float, identical format)
 
         const discs = data.report.discs;
-        const sum = discs.reduce((acc, obj) => acc + obj.confidence, 0);
-        const overall_confidence = sum / discs.length;
+
+        // Step 1: Remove "Not Detected"
+        const validDiscs = discs.filter(d => 
+            d.condition !== "Not_Detected"
+        )
+
+        let selectedDiscs = [];
+
+        // Step 2: Priority logic
+        if (validDiscs.some(d => d.condition === "Herniation")) {
+            selectedDiscs = validDiscs.filter(d => d.condition === "Herniation");
+        } 
+        else if (validDiscs.some(d => d.condition === "Bulging")) {
+            selectedDiscs = validDiscs.filter(d => d.condition === "Bulging");
+        } 
+        else {
+            selectedDiscs = validDiscs.filter(d => d.condition === "Normal");
+        }
+
+        // Step 3: Calculate average
+        const sum = selectedDiscs.reduce((acc, obj) => acc + obj.confidence, 0);
+        const overall_confidence = sum / selectedDiscs.length;
 
         const confidencePercent = (overall_confidence * 100).toFixed(1);
+
+        // Step 4: Display
         document.getElementById("confidence-text").textContent = confidencePercent + "%";
-        document.getElementById("confidence-bar").style.width  = confidencePercent + "%";
+        document.getElementById("confidence-bar").style.width = confidencePercent + "%";
 
         // ── Detection counts ──────────────────────────────────────────────
         // Old: data.counts.Normal / .Bulging / .Herniation
@@ -211,7 +241,7 @@ async function analyzeImage(event) {
                 span.className = "font-bold text-emerald-500 text-lg"
             }
             else{
-                span.className = "font-bold text-blue-500 text-lg"
+                span.className = "font-bold text-gray-500 text-lg"
             }
         });
 
@@ -220,7 +250,7 @@ async function analyzeImage(event) {
             "Normal": "#10B981",    
             "Bulging": "#F59E0B",   
             "Herniation": "#EF4444",
-            "Not_Detected": "#3B82F6"
+            "Not_Detected": "gray"
         };
 
         const svg = document.getElementById("progressChart");
@@ -255,6 +285,7 @@ async function analyzeImage(event) {
         svg.appendChild(circle);
         });
 
+        loadMetrics();
 
     } catch (error) {
         console.error(error);
@@ -265,6 +296,78 @@ async function analyzeImage(event) {
         document.getElementById("action-buttons").classList.remove("hidden");
     }
 }
+
+function updateMetrics(data) {
+    const map = Math.round(data.map50 * 100);
+    const precision = Math.round(data.precision * 100);
+    const recall = Math.round(data.recall * 100);
+
+    // mAP
+    document.getElementById("mapValue").textContent = map + "%";
+    document.getElementById("mapBar").style.width = map + "%";
+    document.getElementById("mapInside").textContent = map + "%";
+
+    // Precision
+    document.getElementById("precisionValue").textContent = precision + "%";
+    document.getElementById("precisionBar").style.width = precision + "%";
+    document.getElementById("precisionInside").textContent = precision + "%";
+
+    // Recall
+    document.getElementById("recallValue").textContent = recall + "%";
+    document.getElementById("recallBar").style.width = recall + "%";
+    document.getElementById("recallInside").textContent = recall + "%";
+}
+
+async function downloadReportAsPDF(data) {
+
+    // const btn = document.getElementById("download-btn");
+    // btn.textContent = "Generating PDF...";
+    // btn.disabled    = true;
+
+    try {
+        // Send the entire object as a JSON string in FormData
+        const formData = new FormData();
+        formData.append("data", JSON.stringify(data));
+        formData.append("original_image", originalImageFile);
+
+            console.log("data being sent:", data);  // ← add this
+    console.log("stringified:", JSON.stringify(data));  // ← and this
+    console.log(originalImageFile);
+
+        const response = await fetch("http://localhost:8000/generate-report", {
+            method : "POST",
+            body   : formData,
+        });
+
+        if (!response.ok) throw new Error("Failed to generate report");
+
+        // Silent download — no dialog, no preview
+        const blob     = await response.blob();
+        const url      = URL.createObjectURL(blob);
+        const a        = document.createElement("a");
+        a.href         = url;
+        a.download     = `spine_report_${data.patient.name}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+    } catch (err) {
+        console.error("PDF generation failed:", err);
+        alert("Failed to generate report. Please try again.");
+    } finally {
+        btn.textContent = "Download Report";
+        btn.disabled    = false;
+    }
+}
+
+async function loadMetrics() {
+    const response = await fetch("http://127.0.0.1:8000/metrics");
+    eval_data = await response.json();
+    updateMetrics(eval_data);
+}
+
+
 
 // Dark Mode Toggle
 function toggleDarkMode() {
@@ -285,3 +388,219 @@ function toggleMobileMenu() {
     document.getElementById("menu-icon").classList.toggle("hidden", !isOpen);
     document.getElementById("close-icon").classList.toggle("hidden", isOpen);
 }
+
+
+
+// Generate Report Button
+
+function openReportModal() {
+    const overlay = document.getElementById('report-modal-overlay');
+    overlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+
+    // Reset form
+    document.getElementById('r-name').value = '';
+    document.getElementById('r-dob').value = '';
+    document.getElementById('r-age').value = '';
+    document.getElementById('r-weight').value = '';
+    document.querySelectorAll('input[name="r-gender"]').forEach(r => r.checked = false);
+    document.getElementById('r-error').classList.remove('show');
+    document.getElementById('r-error').textContent = '';
+    document.getElementById('r-success').classList.remove('show');
+    document.querySelectorAll('.rform-input').forEach(i => i.classList.remove('r-error'));
+}
+
+function closeReportModal() {
+    document.getElementById('report-modal-overlay').classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+function handleReportOverlayClick(e) {
+    if (e.target === document.getElementById('report-modal-overlay')) {
+        closeReportModal();
+    }
+}
+
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeReportModal();
+});
+
+
+function handleReportDownload() {
+    const name   = document.getElementById('r-name').value.trim();
+    const dob    = document.getElementById('r-dob').value;
+    const gender = document.querySelector('input[name="r-gender"]:checked');
+    const errorEl   = document.getElementById('r-error');
+    const successEl = document.getElementById('r-success');
+
+    // Clear previous state
+    errorEl.classList.remove('show');
+    errorEl.textContent = '';
+    successEl.classList.remove('show');
+    document.querySelectorAll('.rform-input').forEach(i => i.classList.remove('r-error'));
+
+    // Validate
+    if (!name) {
+        errorEl.textContent = 'Full Name is required.';
+        errorEl.classList.add('show');
+        document.getElementById('r-name').classList.add('r-error');
+        document.getElementById('r-name').focus();
+        return;
+    }
+    if (!dob) {
+        errorEl.textContent = 'Date of Birth is required.';
+        errorEl.classList.add('show');
+        document.getElementById('r-dob').classList.add('r-error');
+        return;
+    }
+    if (!gender) {
+        errorEl.textContent = 'Please select a gender.';
+        errorEl.classList.add('show');
+        return;
+    }
+
+    // All valid — trigger your actual download/report logic here
+    PatientDetails = {
+        name,
+        dob,
+        age:    document.getElementById('r-age').value,
+        gender: gender.value,
+        weight: document.getElementById('r-weight').value,
+    };
+    successEl.classList.add('show');
+
+    complete_objdetails = {
+        patient : PatientDetails,
+        report : data
+    };
+
+
+    downloadReportAsPDF(complete_objdetails);
+    
+}
+
+
+
+// for Results Page
+
+// function populateReport() {
+//     const report  = data.report;
+//     const patient = PatientDetails || {};
+//     const now     = new Date().toISOString().replace("T"," ").slice(0,19);
+//     const id      = "DET-" + Math.random().toString(36).substr(2,6).toUpperCase();
+//     const detDate = report.timestamp.replace("T"," ").slice(0,19);
+
+//     // console.log(report);
+//     // console.log(patient);
+//     // console.log(now);
+//     // console.log(id);
+//     // console.log(detDate);
+
+//     complete_objdetails = {
+//         patient : PatientDetails,
+//         report : data
+//     };
+
+// console.log(complete_objdetails);
+
+//     // ── Detection IDs everywhere ───────────────────────────
+//     // ["p1-det-id","p2-det-id","foot1-det-id","foot2-det-id"]
+//     //   .forEach(el => document.getElementById(el).textContent = id);
+
+//     // // ── Dates ──────────────────────────────────────────────
+//     // ["p1-generated","p2-generated"].forEach(el => document.getElementById(el).textContent = now);
+//     // ["p1-det-date","p2-det-date"].forEach(el => document.getElementById(el).textContent = detDate);
+
+//     // // ── Patient Details ────────────────────────────────────
+//     // document.getElementById("pt-name").textContent   = patient.name   || "N/A";
+//     // document.getElementById("pt-dob").textContent    = patient.dob    || "N/A";
+//     // document.getElementById("pt-age").textContent    = patient.age    ? patient.age + " yrs" : "N/A";
+//     // document.getElementById("pt-gender").textContent = patient.gender || "N/A";
+//     // document.getElementById("pt-weight").textContent = patient.weight ? patient.weight + " kg" : "N/A";
+
+//     // // ── Image filenames ────────────────────────────────────
+//     // document.getElementById("orig-filename").textContent = report.image_name || "N/A";
+//     // document.getElementById("det-filename").textContent  = report.image_name || "N/A";
+
+//     // // ── Annotated image (base64 from /predict/full) ────────
+//     // if (data.annotated_image) {
+//     //   const ph  = document.getElementById("det-placeholder");
+//     //   const img = document.createElement("img");
+//     //   img.src   = data.annotated_image;
+//     //   img.alt   = "Detected MRI";
+//     //   ph.replaceWith(img);
+//     // }
+
+//     // // ── Results table ──────────────────────────────────────
+//     // const badge = c => ({
+//     //   "Normal"      : `<span class="badge-normal">✅ Normal</span>`,
+//     //   "Bulging"     : `<span class="badge-bulging">⚠️ Bulging</span>`,
+//     //   "Herniation"  : `<span class="badge-herniation">🔴 Herniation</span>`,
+//     //   "Not Detected": `<span class="badge-notdetected">❓ Not Detected</span>`,
+//     // })[c] || `<span class="badge-notdetected">${c}</span>`;
+
+//     // const color = c => ({
+//     //   "Normal":"var(--normal)","Bulging":"var(--bulging)",
+//     //   "Herniation":"var(--herniation)","Not Detected":"var(--notfound)",
+//     // })[c] || "var(--notfound)";
+
+//     // document.getElementById("results-tbody").innerHTML = report.discs.map(d => {
+//     //   const cv = d.confidence > 0 ? d.confidence.toFixed(2) : "N/A";
+//     //   const cp = d.confidence > 0 ? (d.confidence*100).toFixed(1)+"%" : "N/A";
+//     //   const bw = d.confidence > 0 ? (d.confidence*100)+"%" : "0%";
+//     //   const cl = color(d.condition);
+//     //   return `<tr>
+//     //     <td class="disc-cell">${d.disc_level.replace("-"," – ")}</td>
+//     //     <td>${badge(d.condition)}</td>
+//     //     <td><div class="conf-bar-wrap">
+//     //       <div class="conf-bar"><div class="conf-bar-fill" style="width:${bw};background:${cl}"></div></div>
+//     //       <span class="conf-text" style="color:${cl}">${cv}</span>
+//     //     </div></td>
+//     //     <td><strong>${cp}</strong></td>
+//     //   </tr>`;
+//     // }).join("");
+
+//     // // ── Summary counts ─────────────────────────────────────
+//     // const s = report.summary;
+//     // document.getElementById("sum-total").textContent       = 5;
+//     // document.getElementById("sum-normal").textContent      = s.Normal        || 0;
+//     // document.getElementById("sum-bulging").textContent     = s.Bulging       || 0;
+//     // document.getElementById("sum-herniation").textContent  = s.Herniation    || 0;
+//     // document.getElementById("sum-notdetected").textContent = s["Not Detected"]|| 0;
+
+//     // // ── Overall Status Banner ──────────────────────────────
+//     // const banner   = document.getElementById("status-banner");
+//     // const stitle   = document.getElementById("status-title");
+//     // const sdesc    = document.getElementById("status-desc");
+//     // const affected = (s.Bulging||0) + (s.Herniation||0);
+
+//     // if (report.overall_status === "Critical") {
+//     //   banner.className = "status-banner critical";
+//     //   stitle.textContent = "Overall Status: Critical";
+//     //   sdesc.textContent  = `The AI model identified abnormalities in ${affected} of 5 analysed disc level(s): `
+//     //     + `${s.Herniation||0} disc(s) show signs of Herniation; ${s.Bulging||0} disc(s) show Bulging. `
+//     //     + `Clinical correlation and radiologist review are strongly recommended.`;
+//     // } else if (report.overall_status === "Attention Required") {
+//     //   banner.className = "status-banner attention";
+//     //   stitle.textContent = "Overall Status: Attention Required";
+//     //   sdesc.textContent  = `${s.Bulging||0} disc(s) show Bulging. Monitoring and clinical consultation advised.`;
+//     // } else {
+//     //   banner.className = "status-banner normal-status";
+//     //   stitle.textContent = "Overall Status: Normal";
+//     //   sdesc.textContent  = "All analysed disc levels appear normal. No significant abnormalities detected.";
+//     // }
+
+//     //console.log(data);
+//   }
+
+//   // ── Sample preview data (remove when connecting to real API) ─
+//   populateReport({
+//     patient: patientDetails,
+//     report: {
+//       image_name      : "sample_mri.jpg",
+//       timestamp       : "2025-06-01T14:32:10",
+//       processing_time : 0.42,
+//       result : data.report
+//     },
+//     annotated_image: data.annotated_image
+//   });
