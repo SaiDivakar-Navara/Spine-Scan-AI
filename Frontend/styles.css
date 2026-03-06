@@ -1,6 +1,9 @@
-/* Custom Styles for SpineAI */
+/* ================================================================
+   SpineAI — styles.css
+   Full dark mode support added throughout
+================================================================ */
 
-/* Navigation Links */
+/* ── Navigation Links ── */
 .nav-link {
     display: flex;
     align-items: center;
@@ -13,16 +16,8 @@
     font-weight: 500;
     text-decoration: none;
 }
-
-.nav-link:hover {
-    color: #0f172a;
-    background-color: #f9fafb;
-}
-
-.nav-link.active {
-    background-color: #ccfbf1;
-    color: #0d9488;
-}
+.nav-link:hover { color: #0f172a; background-color: #f9fafb; }
+.nav-link.active { background-color: #ccfbf1; color: #0d9488; }
 
 .mobile-nav-link {
     display: flex;
@@ -36,17 +31,10 @@
     transition: all 0.2s ease;
     text-decoration: none;
 }
+.mobile-nav-link:hover { background-color: #f9fafb; }
+.mobile-nav-link.active { background-color: #ccfbf1; color: #0d9488; }
 
-.mobile-nav-link:hover {
-    background-color: #f9fafb;
-}
-
-.mobile-nav-link.active {
-    background-color: #ccfbf1;
-    color: #0d9488;
-}
-
-/* Buttons */
+/* ── Buttons ── */
 .btn-primary {
     display: inline-flex;
     align-items: center;
@@ -63,7 +51,6 @@
     border: none;
     cursor: pointer;
 }
-
 .btn-primary:hover {
     background: linear-gradient(to right, #0d9488, #0891b2);
     transform: scale(1.05);
@@ -84,12 +71,9 @@
     transition: all 0.3s ease;
     cursor: pointer;
 }
+.btn-secondary:hover { background-color: #f9fafb; }
 
-.btn-secondary:hover {
-    background-color: #f9fafb;
-}
-
-/* Cards */
+/* ── Cards ── */
 .card {
     background: white;
     border: 1px solid #f3f4f6;
@@ -98,100 +82,176 @@
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     transition: all 0.3s ease;
 }
+@media (min-width: 640px) { .card { padding: 32px; } }
+.card:hover { box-shadow: 0 20px 30px rgba(0,0,0,0.1); }
 
-@media (min-width: 640px) {
-    .card {
-        padding: 32px;
-    }
-}
+/* ── Pages ── */
+.page { display: none; }
+.page.active { display: block; }
 
-.card:hover {
-    box-shadow: 0 20px 30px rgba(0,0,0,0.1);
-}
-
-/* Pages */
-.page {
-    display: none;
-}
-
-.page.active {
-    display: block;
-}
-
-/* Animations */
+/* ── Animations ── */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+    to   { opacity: 1; transform: translateY(0); }
 }
+@keyframes progress { from { width: 0; } }
 
-@keyframes progress {
-    from { width: 0; }
-}
-
-.animate-fadeIn {
-    animation: fadeIn 0.6s ease-out forwards;
-}
-
-.animate-progress {
-    animation: progress 1s ease-out forwards;
-}
-
+.animate-fadeIn { animation: fadeIn 0.6s ease-out forwards; }
+.animate-progress { animation: progress 1s ease-out forwards; }
 .animation-delay-100 { animation-delay: 0.1s; }
 .animation-delay-200 { animation-delay: 0.2s; }
 .animation-delay-300 { animation-delay: 0.3s; }
 .animation-delay-400 { animation-delay: 0.4s; }
 
-/* Dark Mode */
+
+/* ================================================================
+   DARK MODE
+================================================================ */
+
+/* ── Base / Body ── */
 .dark body {
-    background-color: #020617;
-    color: white;
+    background: linear-gradient(135deg, #0b1120 0%, #0f172a 50%, #0b1a1a 100%);
+    color: #e2e8f0;
 }
 
+/* ── Navbar ── */
+.dark #navbar {
+    background: rgba(15, 23, 42, 0.85);
+    border-bottom-color: #1e293b;
+}
+
+/* ── Nav links ── */
+.dark .nav-link { color: #94a3b8; }
+.dark .nav-link:hover { color: #f1f5f9; background-color: #1e293b; }
+.dark .nav-link.active { background-color: rgba(20, 184, 166, 0.15); color: #2dd4bf; }
+
+.dark .mobile-nav-link { color: #94a3b8; }
+.dark .mobile-nav-link:hover { background-color: #1e293b; }
+.dark .mobile-nav-link.active { background-color: rgba(20, 184, 166, 0.15); color: #2dd4bf; }
+
+/* ── Mobile menu panel ── */
+.dark #mobile-menu { background: #0f172a; }
+
+/* ── Theme toggle button ── */
+.dark #theme-toggle { background-color: #1e293b; color: #94a3b8; }
+.dark #theme-toggle:hover { background-color: #334155; }
+
+/* ── Cards ── */
 .dark .card {
-    background: rgba(30, 41, 59, 0.5);
-    border: 1px solid #334155;
+    background: rgba(30, 41, 59, 0.7);
+    border-color: #1e293b;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
+.dark .card:hover { box-shadow: 0 20px 30px rgba(0,0,0,0.4); }
 
-.dark .nav-link {
-    color: #94a3b8;
+/* ── Headings & text inside cards ── */
+.dark .text-slate-800,
+.dark .text-slate-900 { color: #f1f5f9 !important; }
+.dark .text-slate-600,
+.dark .text-slate-500 { color: #94a3b8 !important; }
+.dark .text-slate-700 { color: #cbd5e1 !important; }
+
+/* ── Buttons ── */
+.dark .btn-secondary {
+    background: #1e293b;
+    border-color: #334155;
+    color: #cbd5e1;
 }
+.dark .btn-secondary:hover { background: #334155; }
 
-.dark .nav-link:hover {
-    color: white;
-    background-color: #1e293b;
+/* ── Upload page ── */
+/* Dropzone */
+.dark #dropzone {
+    border-color: #334155;
+    background: transparent;
 }
+.dark #dropzone:hover { border-color: #14b8a6; background: rgba(20,184,166,0.05); }
 
-.dark .nav-link.active {
-    background-color: rgba(20, 184, 166, 0.2);
-    color: #2dd4bf;
-}
+/* File info row */
+.dark #preview-section .bg-gray-50 { background: #1e293b !important; }
+.dark #preview-section .bg-white   { background: #0f172a !important; }
+.dark #preview-section .text-slate-800 { color: #f1f5f9 !important; }
+.dark #preview-section .text-slate-500 { color: #64748b !important; }
+.dark #preview-section .text-slate-600 { color: #94a3b8 !important; }
 
-.dark .mobile-nav-link {
-    color: #94a3b8;
-}
+/* Format badges */
+.dark .bg-gray-100 { background-color: #1e293b !important; }
+.dark .text-slate-600 { color: #94a3b8 !important; }
 
-.dark .mobile-nav-link:hover {
-    background-color: #1e293b;
-}
+/* ── Results page ── */
+/* Detection image background */
+.dark .bg-gray-100 { background-color: #1e293b !important; }
 
-.dark .mobile-nav-link.active {
-    background-color: rgba(20, 184, 166, 0.2);
-    color: #2dd4bf;
-}
+/* Risk badge default */
+.dark #risk-badge { background-color: #1e293b; color: #94a3b8; }
 
+/* Detection summary rows */
+.dark .bg-gray-50 { background-color: rgba(30,41,59,0.6) !important; }
+.dark .font-medium.text-slate-600 { color: #94a3b8 !important; }
+
+/* Confidence bar track */
+.dark .bg-gray-200 { background-color: #1e293b !important; }
+
+/* Prediction details box */
+.dark .p-4.rounded-xl.bg-gray-50 { background-color: rgba(30,41,59,0.6) !important; }
+
+/* Notes (Herniation / Bulging / Normal) stay coloured — no override needed */
+
+/* Metrics comparison bars text */
+.dark .text-slate-800 { color: #f1f5f9 !important; }
+
+/* "Processed with YOLO v8" */
+.dark .text-sm.text-slate-500 { color: #64748b !important; }
+
+/* ── Stats section (white bg band) ── */
+.dark .bg-white { background-color: #0f172a !important; }
+
+/* ── CTA gradient section ── stays coloured, no override needed ── */
+
+/* ── About page ── */
+.dark .text-teal-500 { color: #2dd4bf !important; }
+
+/* Workflow step number badge */
+.dark .bg-teal-100 { background-color: rgba(20,184,166,0.2) !important; }
+.dark .text-teal-600 { color: #2dd4bf !important; }
+
+/* Team card ring */
+.dark .ring-teal-500\/20 { --tw-ring-color: rgba(45,212,191,0.2); }
+
+/* ── Footer ── */
 .dark footer {
-    background-color: #0f172a;
-    border-top: 1px solid #1e293b;
-    color: #94a3b8;
+    background: linear-gradient(135deg, #0b1120, #0f172a) !important;
+    border-top-color: #1e293b;
 }
+.dark footer h4 { color: #f1f5f9; }
+.dark footer p,
+.dark footer a,
+.dark footer li a { color: #64748b; }
+.dark footer a:hover { color: #2dd4bf; }
+.dark footer .bg-white { background-color: #1e293b !important; }
+.dark footer .text-slate-600 { color: #64748b !important; }
+.dark footer .text-slate-800 { color: #f1f5f9 !important; }
+.dark footer .border-gray-200 { border-color: #1e293b !important; }
+.dark footer .text-sm.text-slate-500 { color: #475569 !important; }
 
+/* Social icon buttons in footer */
+.dark footer a.p-2 {
+    background-color: #1e293b;
+    color: #64748b;
+}
+.dark footer a.p-2:hover { color: #2dd4bf; background-color: #334155; }
+
+
+/* ================================================================
+   REPORT MODAL — base styles
+================================================================ */
 
 /* ── Overlay ── */
 #report-modal-overlay {
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.35);
+    background: rgba(0, 0, 0, 0.45);
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
     z-index: 99999;
@@ -237,6 +297,7 @@
     top: 0;
     background: #fff;
     z-index: 1;
+    transition: background 0.3s, border-color 0.3s;
 }
 .rmodal-header h2 {
     font-size: 1.05rem;
@@ -272,6 +333,7 @@
     color: #6b7280;
     text-transform: uppercase;
     letter-spacing: 0.04em;
+    transition: color 0.3s;
 }
 .rform-input {
     padding: 9px 13px;
@@ -281,7 +343,7 @@
     color: #111827;
     background: #fafafa;
     outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.3s, color 0.3s;
     width: 100%;
     font-family: inherit;
 }
@@ -333,11 +395,7 @@
 .rreq { color: #ef4444; margin-left: 2px; }
 
 /* ── Error text ── */
-.r-error-msg {
-    font-size: 0.8rem;
-    color: #ef4444;
-    display: none;
-}
+.r-error-msg { font-size: 0.8rem; color: #ef4444; display: none; }
 .r-error-msg.show { display: block; }
 
 /* ── Divider ── */
@@ -345,6 +403,7 @@
     border: none;
     border-top: 1px solid #f3f4f6;
     margin: 4px 0;
+    transition: border-color 0.3s;
 }
 
 /* ── Download Button ── */
@@ -381,10 +440,7 @@
     font-weight: 500;
     color: #16a34a;
 }
-.r-success.show {
-    display: flex;
-    animation: rfadeUp 0.25s ease;
-}
+.r-success.show { display: flex; animation: rfadeUp 0.25s ease; }
 @keyframes rfadeUp {
     from { opacity: 0; transform: translateY(5px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -395,3 +451,78 @@
     .rform-row { grid-template-columns: 1fr; }
     .rmodal-header, .rmodal-body { padding-left: 18px; padding-right: 18px; }
 }
+
+
+/* ================================================================
+   MODAL — DARK MODE
+================================================================ */
+
+/* Overlay darker backdrop */
+.dark #report-modal-overlay { background: rgba(0, 0, 0, 0.65); }
+
+/* Modal box */
+.dark #report-modal-box {
+    background: #1e293b;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+}
+.dark #report-modal-box::-webkit-scrollbar-thumb { background: #334155; }
+
+/* Header */
+.dark .rmodal-header {
+    background: #1e293b;
+    border-bottom-color: #334155;
+}
+.dark .rmodal-header h2 { color: #f1f5f9; }
+.dark .rmodal-close { color: #64748b; }
+.dark .rmodal-close:hover { color: #f1f5f9; background: #334155; }
+
+/* Labels */
+.dark .rform-label { color: #94a3b8; }
+
+/* Inputs */
+.dark .rform-input {
+    background: #0f172a;
+    border-color: #334155;
+    color: #f1f5f9;
+}
+.dark .rform-input:focus {
+    border-color: #64748b;
+    background: #1e293b;
+    box-shadow: 0 0 0 3px rgba(100,116,139,0.2);
+}
+.dark .rform-input::placeholder { color: #475569; }
+.dark .rform-input.r-error {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 3px rgba(239,68,68,0.15);
+}
+
+/* Date input icon tint — browser dependent, best effort */
+.dark input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1) opacity(0.5); }
+
+/* Radio labels */
+.dark .rradio-label {
+    background: #0f172a;
+    border-color: #334155;
+    color: #94a3b8;
+}
+.dark .rradio-label:hover { border-color: #64748b; background: #1e293b; color: #f1f5f9; }
+.dark .rradio-opt input:checked + .rradio-label {
+    border-color: #14b8a6;
+    background: rgba(20,184,166,0.1);
+    color: #2dd4bf;
+}
+
+/* Divider */
+.dark .rmodal-divider { border-top-color: #334155; }
+
+/* Download button */
+.dark .rbtn-download { background: #14b8a6; color: #fff; }
+.dark .rbtn-download:hover { background: #0d9488; }
+
+/* Success box */
+.dark .r-success {
+    background: rgba(20,184,166,0.1);
+    border-color: rgba(20,184,166,0.3);
+    color: #2dd4bf;
+}
+
