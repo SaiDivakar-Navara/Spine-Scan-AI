@@ -569,28 +569,73 @@
                                 <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-blue-500"></div><span class="text-sm text-slate-600">Not Detected (<span id="Not_Detected">0</span>%)</span></div>
                             </div>
                         </div>
-                        
-                        <div class="card animate-fadeIn animation-delay-300">
-                            <h3 class="font-semibold mb-4 text-slate-800">Metrics Comparison</h3>
-                            <div class="space-y-4">
-                                <div>
-                                    <div class="flex justify-between mb-1"><span class="text-sm text-slate-600">mAP</span><span class="text-sm font-semibold text-slate-800">92%</span></div>
-                                    <div class="h-6 bg-gray-200 rounded-lg overflow-hidden"><div class="h-full bg-gradient-to-r from-teal-500 to-cyan-500 rounded-lg flex items-center justify-end pr-2 animate-progress" style="width: 92%"><span class="text-xs text-white font-medium">92%</span></div></div>
-                                </div>
-                                <div>
-                                    <div class="flex justify-between mb-1"><span class="text-sm text-slate-600">Precision</span><span class="text-sm font-semibold text-slate-800">95%</span></div>
-                                    <div class="h-6 bg-gray-200 rounded-lg overflow-hidden"><div class="h-full bg-gradient-to-r from-violet-500 to-purple-500 rounded-lg flex items-center justify-end pr-2 animate-progress" style="width: 95%"><span class="text-xs text-white font-medium">95%</span></div></div>
-                                </div>
-                                <div>
-                                    <div class="flex justify-between mb-1"><span class="text-sm text-slate-600">Recall</span><span class="text-sm font-semibold text-slate-800">89%</span></div>
-                                    <div class="h-6 bg-gray-200 rounded-lg overflow-hidden"><div class="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg flex items-center justify-end pr-2 animate-progress" style="width: 89%"><span class="text-xs text-white font-medium">89%</span></div></div>
-                                </div>
-                                <div>
-                                    <div class="flex justify-between mb-1"><span class="text-sm text-slate-600">F1 Score</span><span class="text-sm font-semibold text-slate-800">92%</span></div>
-                                    <div class="h-6 bg-gray-200 rounded-lg overflow-hidden"><div class="h-full bg-gradient-to-r from-pink-500 to-rose-500 rounded-lg flex items-center justify-end pr-2 animate-progress" style="width: 92%"><span class="text-xs text-white font-medium">92%</span></div></div>
+
+                            <div class="card animate-fadeIn animation-delay-300">
+                                <h3 class="font-semibold mb-4 text-slate-800">Metrics Comparison</h3>
+                                <div class="space-y-4">
+
+                                    <!-- mAP -->
+                                    <div>
+                                        <div class="flex justify-between mb-1">
+                                            <span class="text-sm text-slate-600">mAP</span>
+                                            <span id="metric-map-label" class="text-sm font-semibold text-slate-800">—</span>
+                                        </div>
+                                        <div class="h-6 bg-gray-200 rounded-lg overflow-hidden">
+                                            <div id="metric-map"
+                                                class="h-full bg-gradient-to-r from-teal-500 to-cyan-500 rounded-lg flex items-center justify-end pr-2 transition-all duration-500"
+                                                style="width: 0%">
+                                                <span class="text-xs text-white font-medium"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Precision -->
+                                    <div>
+                                        <div class="flex justify-between mb-1">
+                                            <span class="text-sm text-slate-600">Precision</span>
+                                            <span id="metric-precision-label" class="text-sm font-semibold text-slate-800">—</span>
+                                        </div>
+                                        <div class="h-6 bg-gray-200 rounded-lg overflow-hidden">
+                                            <div id="metric-precision"
+                                                class="h-full bg-gradient-to-r from-violet-500 to-purple-500 rounded-lg flex items-center justify-end pr-2 transition-all duration-500"
+                                                style="width: 0%">
+                                                <span class="text-xs text-white font-medium"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Recall -->
+                                    <div>
+                                        <div class="flex justify-between mb-1">
+                                            <span class="text-sm text-slate-600">Recall</span>
+                                            <span id="metric-recall-label" class="text-sm font-semibold text-slate-800">—</span>
+                                        </div>
+                                        <div class="h-6 bg-gray-200 rounded-lg overflow-hidden">
+                                            <div id="metric-recall"
+                                                class="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg flex items-center justify-end pr-2 transition-all duration-500"
+                                                style="width: 0%">
+                                                <span class="text-xs text-white font-medium"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- F1 Score -->
+                                    <div>
+                                        <div class="flex justify-between mb-1">
+                                            <span class="text-sm text-slate-600">F1 Score</span>
+                                            <span id="metric-f1-label" class="text-sm font-semibold text-slate-800">—</span>
+                                        </div>
+                                        <div class="h-6 bg-gray-200 rounded-lg overflow-hidden">
+                                            <div id="metric-f1"
+                                                class="h-full bg-gradient-to-r from-pink-500 to-rose-500 rounded-lg flex items-center justify-end pr-2 transition-all duration-500"
+                                                style="width: 0%">
+                                                <span class="text-xs text-white font-medium"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                 </div>
                             </div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -828,6 +873,8 @@
                 </div>
             </div>
     </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

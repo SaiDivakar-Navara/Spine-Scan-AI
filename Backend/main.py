@@ -1,29 +1,19 @@
-# ================================================================
-#  SPINAL CORD DAMAGE DETECTION — FastAPI Backend
-#
-#  Endpoints:
-#    GET  /health        → server health check
-#    POST /predict/full  → upload MRI image →
-#                          JSON report + base64 annotated image
-# ================================================================
-
 from fastapi                 import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic                import BaseModel
 from ultralytics             import YOLO
 from datetime                import datetime
-from typing                  import List
+from typing                  import List, Optional
 import uvicorn
 import cv2
 import numpy  as np
 import base64, os, time
 
-
 # ================================================================
 #  CONFIG
 # ================================================================
-MODEL_PATH  = "best.pt"                            # place best.pt in same folder as main.py
-CLASS_NAMES = ["Normal", "Bulging", "Herniation"]  # must match your Roboflow dataset order
+MODEL_PATH  = "best.pt"
+CLASS_NAMES = ["Normal", "Bulging", "Herniation"]
 DISC_LEVELS = ["L1-L2", "L2-L3", "L3-L4", "L4-L5", "L5-S1"]
 CONF_THRESH = 0.25
 
@@ -33,23 +23,42 @@ CLASS_CONFIG = {
     2: {"name": "Herniation", "color": (0,   0,  255), "severity": "severe",   "emoji": "🔴"},
 }
 
+# ── Hardcoded model evaluation metrics (from training/validation) ─
+MODEL_METRICS = {
+    "mAP"       : 0.92,
+    "precision" : 0.95,
+    "recall"    : 0.89,
+    "f1_score"  : 0.92,
+}
+
 
 # ================================================================
 #  RESPONSE SCHEMAS
 # ================================================================
 class DiscResult(BaseModel):
-    disc_level : str    # "L4-L5"
-    condition  : str    # "Bulging"
-    confidence : float  # 0.90
-    severity   : str    # "low" | "moderate" | "severe" | "unknown"
+    disc_level : str
+    condition  : str
+    confidence : float
+    severity   : str
+
+
+class Metrics(BaseModel):
+    mAP        : float
+    precision  : float
+    recall     : float
+    f1_score   : float
+
 
 class Report(BaseModel):
-    image_name      : str
-    timestamp       : str
-    discs           : List[DiscResult]
-    summary         : dict
-    overall_status  : str
-    processing_time : float
+    image_name          : str
+    timestamp           : str
+    discs               : List[DiscResult]
+    summary             : dict
+    overall_status      : str
+    overall_confidence  : Optional[float]   
+    metrics             : Metrics           
+    processing_time     : float
+
 
 class FullResponse(BaseModel):
     report          : Report
@@ -67,13 +76,12 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins     = ["*"],  # replace * with your frontend URL in production
+    allow_origins     = ["*"],
     allow_credentials = True,
     allow_methods     = ["*"],
     allow_headers     = ["*"],
 )
 
-# ── Load model ONCE at startup — stays in memory for all requests ─
 model = None
 
 @app.on_event("startup")
@@ -92,10 +100,7 @@ def load_model():
 # ================================================================
 
 def decode_image(file_bytes: bytes) -> np.ndarray:
-    """
-    Convert raw uploaded file bytes → OpenCV BGR numpy array.
-    Same as reading an image from disk but done from memory.
-    """
+    """Convert raw uploaded file bytes → OpenCV BGR numpy array."""
     arr = np.frombuffer(file_bytes, np.uint8)
     img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
     return img
@@ -104,16 +109,14 @@ def decode_image(file_bytes: bytes) -> np.ndarray:
 def run_inference(img: np.ndarray) -> list:
     """
     Run YOLOv8 on the image.
-    Reads box coordinates from model output — no drawing here.
-    Sorts detections top → bottom to assign L1-L2 ... L5-S1.
+    Sorts detections top → bottom to assign disc levels L1-L2 … L5-S1.
     """
     if model is None:
         raise HTTPException(
             status_code = 503,
-            detail      = "Model not loaded. Copy best.pt here and restart."
+            detail      = "Model not loaded. Place best.pt in the working directory and restart."
         )
 
-    # ── Model runs here — detection happens once ──────────────────
     results = model.predict(
         source  = img,
         conf    = CONF_THRESH,
@@ -122,7 +125,6 @@ def run_inference(img: np.ndarray) -> list:
     )
     result = results[0]
 
-    # ── Read coordinates from model output ────────────────────────
     detections = []
     if result.boxes and len(result.boxes) > 0:
         for box in result.boxes:
@@ -132,10 +134,10 @@ def run_inference(img: np.ndarray) -> list:
                 "conf"   : round(float(box.conf[0]), 4),
                 "x1": x1, "y1": y1,
                 "x2": x2, "y2": y2,
-                "cy"     : (y1 + y2) // 2,  # Y center for top→bottom sorting
+                "cy"     : (y1 + y2) // 2,
             })
 
-    # ── Sort top → bottom, assign disc levels ────────────────────
+    # Sort top → bottom, assign disc levels
     detections = sorted(detections, key=lambda d: d["cy"])
     for i, det in enumerate(detections):
         det["disc_level"] = DISC_LEVELS[i] if i < len(DISC_LEVELS) else f"Disc-{i+1}"
@@ -144,43 +146,26 @@ def run_inference(img: np.ndarray) -> list:
 
 
 def draw_boxes(img: np.ndarray, detections: list) -> np.ndarray:
-    """
-    Draw colored bounding boxes using coordinates from model output.
-    This is the SAME drawing code from your Colab notebook.
+    """Annotate image with bounding boxes, labels, and a legend."""
+    vis      = img.copy()
+    h, w     = vis.shape[:2]
+    font     = cv2.FONT_HERSHEY_SIMPLEX
 
-    Produces:
-      - Color coded boxes   Green=Normal | Yellow=Bulging | Red=Herniation
-      - Disc level labels   L4-L5 | Bulging 0.90
-      - Colour legend       bottom left corner
-      - Title bar           top of image
-
-    Returns vis — the final annotated numpy array.
-    This is the same image you see saved in your Colab output folder.
-    """
-    vis  = img.copy()
-    h, w = vis.shape[:2]
-    font = cv2.FONT_HERSHEY_SIMPLEX
-
-    # ── Bounding boxes + labels ───────────────────────────────────
     for det in detections:
         cfg   = CLASS_CONFIG.get(det["cls_id"], {"name": "Unknown", "color": (180, 180, 180)})
         color = cfg["color"]
         label = f"{det['disc_level']}  |  {cfg['name']}  {det['conf']:.2f}"
         x1, y1, x2, y2 = det["x1"], det["y1"], det["x2"], det["y2"]
 
-        # Box
         cv2.rectangle(vis, (x1, y1), (x2, y2), color, 2)
 
-        # Label background
         (tw, th), _ = cv2.getTextSize(label, font, 0.55, 2)
         lbl_y1 = max(y1 - th - 10, 0)
         cv2.rectangle(vis, (x1, lbl_y1), (x1 + tw + 8, lbl_y1 + th + 8), color, -1)
-
-        # Label text
         cv2.putText(vis, label, (x1 + 4, lbl_y1 + th + 2),
                     font, 0.55, (255, 255, 255), 2, cv2.LINE_AA)
 
-    # ── Colour legend (bottom left) ───────────────────────────────
+    # Colour legend (bottom left)
     n      = len(CLASS_CONFIG)
     box_h  = n * 24 + 30
     x0, y0 = 10, h - box_h - 10
@@ -191,40 +176,43 @@ def draw_boxes(img: np.ndarray, detections: list) -> np.ndarray:
         cv2.rectangle(vis, (x0, y-13), (x0+16, y+3), cfg["color"], -1)
         cv2.putText(vis, cfg["name"], (x0+22, y), font, 0.48, (220, 220, 220), 1)
 
-    # ── Title bar (top) ───────────────────────────────────────────
+    # Title bar (top)
     cv2.rectangle(vis, (0, 0), (w, 30), (20, 20, 20), -1)
     cv2.putText(vis, "LUMBAR SPINE DAMAGE DETECTION", (10, 21),
                 font, 0.65, (255, 255, 255), 2, cv2.LINE_AA)
 
-    return vis  # ← final annotated numpy array
+    return vis
 
 
 def numpy_to_base64(vis: np.ndarray) -> str:
-    """
-    Convert the final annotated numpy array → base64 string.
-
-    Flow:
-      vis  (numpy array — your drawn image)
-        ↓  cv2.imencode(".jpg")
-      buffer  (JPEG bytes in memory — same as imwrite but no disk write)
-        ↓  base64.b64encode()
-      b64_string  (text representation of those bytes)
-        ↓  prefix added
-      "data:image/jpeg;base64,/9j/4AAQSkZJRgABA..."
-
-    The pixel content is identical to the image saved by cv2.imwrite().
-    Frontend uses it directly:  <img src="data:image/jpeg;base64,..." />
-    """
+    """Encode annotated numpy image → base64 JPEG data URI."""
     _, buffer  = cv2.imencode(".jpg", vis)
-    b64_bytes  = base64.b64encode(buffer.tobytes())
-    b64_string = b64_bytes.decode("utf-8")
+    b64_string = base64.b64encode(buffer.tobytes()).decode("utf-8")
     return f"data:image/jpeg;base64,{b64_string}"
+
+
+def compute_overall_confidence(disc_rows: list) -> Optional[float]:
+    """
+    Average confidence of detected discs only.
+    Excludes any disc where:
+      - condition is 'Not Detected'   (model did not find it)
+      - confidence is 0.0             (safety net for any zero-conf entries)
+    Returns None if no valid detections exist.
+    """
+    detected = [
+        d["confidence"]
+        for d in disc_rows
+        if d["condition"] != "Not Detected" and d["confidence"] > 0.0
+    ]
+    if not detected:
+        return None
+    return round(sum(detected) / len(detected), 4)
 
 
 def build_report(detections: list, filename: str, elapsed: float) -> dict:
     """
     Build the structured disc-level diagnosis report.
-    Disc levels not detected by model are reported as 'Not Detected'.
+    Undetected disc levels are reported as 'Not Detected'.
     """
     detected_map = {d["disc_level"]: d for d in detections}
     summary      = {"Normal": 0, "Bulging": 0, "Herniation": 0, "Not_Detected": 0}
@@ -260,12 +248,14 @@ def build_report(detections: list, filename: str, elapsed: float) -> dict:
         overall = "Normal"
 
     return {
-        "image_name"      : filename,
-        "timestamp"       : datetime.utcnow().isoformat(),
-        "discs"           : disc_rows,
-        "summary"         : summary,
-        "overall_status"  : overall,
-        "processing_time" : round(elapsed, 3),
+        "image_name"         : filename,
+        "timestamp"          : datetime.utcnow().isoformat(),
+        "discs"              : disc_rows,
+        "summary"            : summary,
+        "overall_status"     : overall,
+        "overall_confidence" : compute_overall_confidence(disc_rows),
+        "metrics"            : MODEL_METRICS,
+        "processing_time"    : round(elapsed, 3),
     }
 
 
@@ -277,50 +267,19 @@ def build_report(detections: list, filename: str, elapsed: float) -> dict:
 def health():
     """Check if server and model are running."""
     return {
-        "status"      : "ok",
-        "model_loaded": model is not None,
-        "timestamp"   : datetime.utcnow().isoformat(),
+        "status"       : "ok",
+        "model_loaded" : model is not None,
+        "timestamp"    : datetime.utcnow().isoformat(),
     }
 
 
-@app.post("/predict/full", response_model=FullResponse, tags=["Detection"])
-async def predict_full(file: UploadFile = File(...)):
+@app.post("/detect", response_model=FullResponse, tags=["Detection"])
+async def detect(file: UploadFile = File(...)):
     """
-    Upload one lumbar spine MRI image.
-
-    Returns one JSON response with two parts:
-
-    ── PART 1: report ──────────────────────────────────────────
-    {
-      "image_name"     : "mri_scan.jpg",
-      "timestamp"      : "2024-01-15T10:30:00",
-      "discs": [
-        {"disc_level": "L1-L2", "condition": "Herniation",   "confidence": 0.82, "severity": "severe"},
-        {"disc_level": "L2-L3", "condition": "Normal",       "confidence": 0.68, "severity": "low"},
-        {"disc_level": "L3-L4", "condition": "Bulging",      "confidence": 0.84, "severity": "moderate"},
-        {"disc_level": "L4-L5", "condition": "Normal",       "confidence": 0.57, "severity": "low"},
-        {"disc_level": "L5-S1", "condition": "Not Detected", "confidence": 0.0,  "severity": "unknown"}
-      ],
-      "summary"        : {"Normal": 2, "Bulging": 1, "Herniation": 1, "Not Detected": 1},
-      "overall_status" : "Critical",
-      "processing_time": 0.342
-    }
-
-    ── PART 2: annotated_image ──────────────────────────────────
-    "data:image/jpeg;base64,/9j/4AAQSkZJRgABA..."
-
-    The base64 string is your MRI image with:
-      - Color coded bounding boxes (Green / Yellow / Red)
-      - Disc level on each box     (L4-L5 | Bulging 0.90)
-      - Colour legend bottom left
-      - Title bar at top
-
-    Use directly in frontend:
-      <img src={response.annotated_image} />
+    Upload a lumbar spine MRI image (JPEG/PNG).
+    Returns a structured disc-level report + base64-encoded annotated image.
     """
-
-    # ── Validate file type ────────────────────────────────────────
-    if file.content_type not in ["image/jpeg", "image/png", "image/jpg"]:
+    if file.content_type not in ["image/jpeg", "image/jpg", "image/png"]:
         raise HTTPException(
             status_code = 400,
             detail      = "Please upload a JPEG or PNG image."
@@ -328,7 +287,7 @@ async def predict_full(file: UploadFile = File(...)):
 
     start = time.time()
 
-    # ── Step 1: uploaded bytes → numpy array ─────────────────────
+    # Step 1: bytes → numpy array
     file_bytes = await file.read()
     img        = decode_image(file_bytes)
     if img is None:
@@ -337,24 +296,22 @@ async def predict_full(file: UploadFile = File(...)):
             detail      = "Could not read the image. Upload a valid JPEG or PNG."
         )
 
-    # ── Step 2: run YOLOv8 — detection happens here ──────────────
+    # Step 2: run YOLOv8 inference
     detections = run_inference(img)
 
-    # ── Step 3: draw boxes on image using model coordinates ───────
-    #           same drawing code as your Colab notebook
+    # Step 3: draw bounding boxes
     vis = draw_boxes(img, detections)
 
-    # ── Step 4: vis (numpy array) → base64 string ────────────────
-    #           vis → cv2.imencode() → bytes → base64.b64encode()
+    # Step 4: numpy → base64
     annotated_b64 = numpy_to_base64(vis)
 
-    # ── Step 5: build text report ────────────────────────────────
+    # Step 5: build report
     report = build_report(detections, file.filename, time.time() - start)
 
-    # ── Step 6: return both in one JSON response ──────────────────
+    # Step 6: return combined response
     return {
-        "report"         : report,
-        "annotated_image": annotated_b64,
+        "report"          : report,
+        "annotated_image" : annotated_b64,
     }
 
 
