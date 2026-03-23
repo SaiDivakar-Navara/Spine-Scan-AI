@@ -13,14 +13,14 @@ import base64, os, time
 #  CONFIG
 # ================================================================
 MODEL_PATH  = "best.pt"
-CLASS_NAMES = ["Normal", "Bulging", "Herniation"]
+CLASS_NAMES = ["Bulging", "Herniation", "Normal"]
 DISC_LEVELS = ["L1-L2", "L2-L3", "L3-L4", "L4-L5", "L5-S1"]
 CONF_THRESH = 0.25
 
 CLASS_CONFIG = {
-    0: {"name": "Normal",     "color": (0,  200,   0), "severity": "low",      "emoji": "✅"},
-    1: {"name": "Bulging",    "color": (0,  200, 255), "severity": "moderate", "emoji": "⚠️"},
-    2: {"name": "Herniation", "color": (0,   0,  255), "severity": "severe",   "emoji": "🔴"},
+    0: {"name": "Bulging",   "color": (0, 200, 255), "severity": "moderate", "emoji": "⚠️"},
+    1: {"name": "Herniation", "color": (0,   0, 255), "severity": "severe",   "emoji": "🔴"},
+    2: {"name": "Normal",     "color": (0, 200,   0), "severity": "low",      "emoji": "✅"},
 }
 
 # ── Hardcoded model evaluation metrics (from training/validation) ─
@@ -215,7 +215,7 @@ def build_report(detections: list, filename: str, elapsed: float) -> dict:
     Undetected disc levels are reported as 'Not Detected'.
     """
     detected_map = {d["disc_level"]: d for d in detections}
-    summary      = {"Normal": 0, "Bulging": 0, "Herniation": 0, "Not_Detected": 0}
+    summary = {"Bulging": 0, "Herniation": 0, "Normal": 0, "Not_Detected": 0}
     disc_rows    = []
 
     for level in DISC_LEVELS:

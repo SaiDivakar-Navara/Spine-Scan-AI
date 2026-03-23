@@ -34,8 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (file) handleFile(file);
     });
 });
-
-
+  
 /* ── Page Navigation ── */
 function showPage(pageName) {
     sessionStorage.setItem("currentPage", pageName);
@@ -355,9 +354,9 @@ function generatePDF(patientData) {
     const detectionId = report.image_name
         ? "DET-" + report.image_name.replace(/[^a-zA-Z0-9]/g, "").substring(0, 8).toUpperCase()
         : "DET-UNKNOWN";
-    const dateObj = new Date(report.timestamp || new Date().toISOString());
-    const dateStr = dateObj.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-    const timeStr = dateObj.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+    const dateObj = new Date(new Date().toISOString());
+    const dateStr = dateObj.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric" });
+    const timeStr = dateObj.toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: true });
 
     doc.setFontSize(8);
     doc.setTextColor(...C.tealLight);
