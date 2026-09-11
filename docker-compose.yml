@@ -1,0 +1,14 @@
+services:
+  backend:
+    build: ./Backend
+    container_name: spin-backend
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build: ./Frontend
+    container_name: spin-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
