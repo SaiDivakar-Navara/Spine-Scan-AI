@@ -25,9 +25,9 @@ CLASS_CONFIG = {
 
 # ── Hardcoded model evaluation metrics (from training/validation) ─
 MODEL_METRICS = {
-    "mAP"       : 0.92,
-    "precision" : 0.95,
-    "recall"    : 0.89,
+    "mAP"       : 0.83,
+    "precision" : 0.87,
+    "recall"    : 0.79,
     "f1_score"  : 0.92,
 }
 
