@@ -5,6 +5,7 @@ window.spineReport   = null;   // data.report  (JSON)
 window.originalImage = null;   // base64 data-URI of user-uploaded image
 window.detectedImage = null;   // base64 data-URI of annotated image from backend
 
+
 document.addEventListener('DOMContentLoaded', () => {
     const currentPage = sessionStorage.getItem("currentPage") || "home";
     showPage(currentPage);
@@ -32,6 +33,25 @@ document.addEventListener('DOMContentLoaded', () => {
     fileInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) handleFile(file);
+    });
+
+    document.getElementById('r-dob').addEventListener('change', function () {
+        const dob = new Date(this.value);
+        if (!this.value || isNaN(dob)) return;
+
+        const today = new Date();
+        let age = today.getFullYear() - dob.getFullYear();
+        const monthDiff = today.getMonth() - dob.getMonth();
+
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+            age--;
+        }
+
+        if (age >= 0 && age <= 120) {
+            document.getElementById('r-age').value = age;
+        } else {
+            document.getElementById('r-age').value = '';
+        }
     });
 });
   
@@ -409,9 +429,9 @@ function generatePDF(patientData) {
 
     y += infoRows.length * rowH + 10;
 
-    // ================================================================
+    // ===============================================================
     //  SECTION 3 & 4 — IMAGES SIDE BY SIDE
-    // ================================================================
+    // ===============================================================
     ensureSpace(90);
 
     fillRect(margin, y, contentW, 8, C.tealLight);
